@@ -133,6 +133,7 @@ const ReviewInner = () => {
                         fileType={currentDocument.fileType}
                         extractedText={currentDocument.extractedText}
                         onDownload={handleDownload}
+                        isRedactionMode={activePanel === 'redaction' && !panelCollapsed}
                     />
                 </div>
 

@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ArrowLeft, Plus, Download, CheckCircle, Clock, 
-  AlertCircle, FileText, MoreHorizontal, Trash2, 
-  Edit, Eye, Send, Loader2, 
+import {
+  ArrowLeft, Plus, Download, CheckCircle, Clock,
+  AlertCircle, FileText, MoreHorizontal, Trash2,
+  Edit, Eye, Send, Loader2,
   Package, Calendar, User,
   Search, X, FilePlus, Hash
 } from 'lucide-react';
@@ -58,7 +58,7 @@ const ProductionSetsPage = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const [detailedProduction, setDetailedProduction] = useState<any>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
@@ -302,7 +302,7 @@ const ProductionSetsPage = () => {
 
   const filteredProductions = productions.filter(production => {
     const matchesSearch = production.setName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         production.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      production.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || production.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -338,13 +338,13 @@ const ProductionSetsPage = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <Card className="bg-muted">
           <CardContent className="p-4">
-            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total</div>
+            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Sets</div>
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
           </CardContent>
         </Card>
         <Card className="bg-muted">
           <CardContent className="p-4">
-            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Draft</div>
+            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Draft Sets</div>
             <div className="text-2xl font-bold text-foreground">{stats.draft}</div>
           </CardContent>
         </Card>
@@ -368,7 +368,7 @@ const ProductionSetsPage = () => {
         </Card>
         <Card className="bg-purple/10">
           <CardContent className="p-4">
-            <div className="text-xs font-bold text-purple uppercase tracking-wider">Documents</div>
+            <div className="text-xs font-bold text-purple uppercase tracking-wider">Total Documents</div>
             <div className="text-2xl font-bold text-purple">{numberFormatter.format(stats.totalDocuments)}</div>
           </CardContent>
         </Card>
@@ -380,14 +380,14 @@ const ProductionSetsPage = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input 
+              <Input
                 placeholder="Search productions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
               {searchQuery && (
-                <button 
+                <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-3"
                   title="Clear search"
@@ -398,7 +398,7 @@ const ProductionSetsPage = () => {
               )}
             </div>
             <div className="flex gap-2">
-              <select 
+              <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3 py-2 rounded-md border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -461,12 +461,12 @@ const ProductionSetsPage = () => {
                             <h3 className="text-lg font-bold text-foreground truncate">
                               {production.setName}
                             </h3>
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={cn("flex items-center gap-1", getStatusColor(production.status))}
                             >
                               {getStatusIcon(production.status)}
-                              {production.status.replace('_', ' ')}
+                              {production.status.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
@@ -495,8 +495,8 @@ const ProductionSetsPage = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           {production.status === 'PRODUCED' && (
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => handleDownload(production.id)}
                               title="Download production"
@@ -505,8 +505,8 @@ const ProductionSetsPage = () => {
                               <Download className="h-4 w-4" />
                             </Button>
                           )}
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => openViewModal(production)}
                             title="View details"
@@ -523,15 +523,15 @@ const ProductionSetsPage = () => {
                             <DropdownMenuContent align="end">
                               {production.status === 'DRAFT' && (
                                 <>
-                                <DropdownMenuItem onClick={() => openAddDocsModal(production)}>
-                                  <FilePlus className="mr-2 h-4 w-4" /> Add Documents
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { setBatesTargetProduction(production); setIsBatesModalOpen(true); }}>
-                                  <Hash className="mr-2 h-4 w-4" /> Apply Bates Numbers
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleStatusChange(production.id, 'IN_REVIEW')}>
-                                  <Send className="mr-2 h-4 w-4" /> Submit for Review
-                                </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openAddDocsModal(production)}>
+                                    <FilePlus className="mr-2 h-4 w-4" /> Add Documents
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { setBatesTargetProduction(production); setIsBatesModalOpen(true); }}>
+                                    <Hash className="mr-2 h-4 w-4" /> Apply Bates Numbers
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleStatusChange(production.id, 'IN_REVIEW')}>
+                                    <Send className="mr-2 h-4 w-4" /> Submit for Review
+                                  </DropdownMenuItem>
                                 </>
                               )}
                               {production.status === 'IN_REVIEW' && canApprove && (
@@ -544,7 +544,7 @@ const ProductionSetsPage = () => {
                                   <Package className="mr-2 h-4 w-4" /> Mark as Produced
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => {
                                   setSelectedProduction(production);
                                   setIsDeleteDialogOpen(true);
@@ -578,21 +578,21 @@ const ProductionSetsPage = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label htmlFor="production-name" className="text-sm font-medium">Production Name</label>
-              <Input 
+              <Input
                 id="production-name"
                 placeholder="e.g., Initial Production Set"
                 value={formData.setName}
-                onChange={(e) => setFormData({...formData, setName: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, setName: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <label htmlFor="production-desc" className="text-sm font-medium">Description</label>
-              <textarea 
+              <textarea
                 id="production-desc"
                 className="w-full min-h-[100px] p-3 rounded-md border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Describe the purpose of this production set..."
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
           </div>
@@ -600,8 +600,8 @@ const ProductionSetsPage = () => {
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleCreateProduction} 
+            <Button
+              onClick={handleCreateProduction}
               disabled={!formData.setName || isProcessing}
             >
               {isProcessing ? (
@@ -628,7 +628,7 @@ const ProductionSetsPage = () => {
               <div className="flex items-center gap-2">
                 <Badge className={getStatusColor(selectedProduction.status)}>
                   {getStatusIcon(selectedProduction.status)}
-                  {selectedProduction.status.replace('_', ' ')}
+                  {selectedProduction.status.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}
                 </Badge>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -736,8 +736,8 @@ const ProductionSetsPage = () => {
               <div className="space-y-2">
                 {availableDocs.map((doc: any) => (
                   <label key={doc.id || doc._id} className="flex items-start gap-3 p-3 border rounded-md cursor-pointer hover:bg-muted/50 transition-colors">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="mt-1"
                       checked={selectedDocIds.includes(doc.id || doc._id)}
                       onChange={(e) => {
@@ -750,7 +750,7 @@ const ProductionSetsPage = () => {
                       <p className="font-medium text-sm truncate">{doc.filename}</p>
                       <p className="text-xs text-muted-foreground truncate">{doc.custodian || 'No custodian'} • {doc.mimeType || 'Unknown type'}</p>
                       {doc.coding && doc.coding.privilegeStatus !== 'NOT_PRIVILEGED' && (
-                         <Badge variant="outline" className="mt-1 bg-destructive/10 text-destructive text-[10px] leading-tight px-1 py-0">Privileged</Badge>
+                        <Badge variant="outline" className="mt-1 bg-destructive/10 text-destructive text-[10px] leading-tight px-1 py-0">Privileged</Badge>
                       )}
                     </div>
                   </label>
@@ -762,8 +762,8 @@ const ProductionSetsPage = () => {
             <Button variant="outline" onClick={() => setIsAddDocsModalOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleAddDocumentsSubmit} 
+            <Button
+              onClick={handleAddDocumentsSubmit}
               disabled={selectedDocIds.length === 0 || isProcessing}
             >
               {isProcessing ? (
@@ -792,8 +792,8 @@ const ProductionSetsPage = () => {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleDeleteProduction}
               disabled={isProcessing}
             >

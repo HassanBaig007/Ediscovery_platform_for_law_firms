@@ -48,6 +48,26 @@ const ACTION_COLORS: Record<string, string> = {
   'REJECT': 'bg-destructive/12 text-destructive border-destructive/20',
 };
 
+const formatAction = (action: string) => {
+  const map: Record<string, string> = {
+    'CREATE': 'created',
+    'UPDATE': 'updated',
+    'DELETE': 'deleted',
+    'VIEW': 'viewed',
+    'LOGIN': 'logged into',
+    'LOGOUT': 'logged out of',
+    'EXPORT': 'exported',
+    'APPROVE': 'approved',
+    'REJECT': 'rejected'
+  };
+  return map[action] || action.toLowerCase();
+};
+
+const formatEntityType = (type: string) => {
+  if (!type) return '';
+  return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+};
+
 const AuditLogsPage = () => {
   const navigate = useNavigate();
   const { isAdmin, isPartner } = useRole();
@@ -370,8 +390,8 @@ const AuditLogsPage = () => {
                           <div>
                             <p className="font-medium text-foreground">
                               <span className="font-semibold">{log.userName}</span>
-                              {' '}<span className="text-muted-foreground">{log.action.toLowerCase()}</span>{' '}
-                              <span className="font-semibold">{log.entityType}</span>
+                              {' '}<span className="text-muted-foreground">{formatAction(log.action)}</span>{' '}
+                              <span className="font-semibold">{formatEntityType(log.entityType)}</span>
                               {log.entityName && (
                                 <span className="text-muted-foreground">: {log.entityName}</span>
                               )}
@@ -392,7 +412,7 @@ const AuditLogsPage = () => {
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <Badge variant="outline" className={cn("text-xs", ACTION_COLORS[log.action])}>
-                              {log.action}
+                              {log.action.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
                             </Badge>
                             <span className="text-xs text-muted-foreground whitespace-nowrap">
                               {getTimeAgo(log.createdAt)}
@@ -429,7 +449,7 @@ const AuditLogsPage = () => {
                   <span className="text-muted-foreground">Action</span>
                   <p className="font-semibold">
                     <Badge variant="outline" className={ACTION_COLORS[selectedLog.action]}>
-                      {selectedLog.action}
+                      {selectedLog.action.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
                     </Badge>
                   </p>
                 </div>
@@ -440,7 +460,7 @@ const AuditLogsPage = () => {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Entity</span>
-                  <p className="font-semibold">{selectedLog.entityType}</p>
+                  <p className="font-semibold">{formatEntityType(selectedLog.entityType)}</p>
                   {selectedLog.entityName && (
                     <p className="text-xs text-muted-foreground">{selectedLog.entityName}</p>
                   )}

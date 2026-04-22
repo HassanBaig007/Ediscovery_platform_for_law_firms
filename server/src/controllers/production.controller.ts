@@ -173,7 +173,7 @@ export const approveProduction = async (req: AuthRequest, res: Response): Promis
             message: `Production set "${production.setName}" has been approved.`,
             link: `/cases/${production.caseId}/productions`,
             isRead: false,
-        }).catch(() => {});
+        }).catch(() => { });
 
         res.json(production);
     } catch (error: any) {

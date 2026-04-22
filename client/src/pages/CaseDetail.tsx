@@ -352,6 +352,11 @@ const CaseDetail = () => {
                                     Quality Control
                                 </Button>
                             )}
+                            {canManageCase && (
+                                <Button variant="outline" size="sm" onClick={() => navigate(`/cases/${id}/productions`)}>
+                                    Production Sets
+                                </Button>
+                            )}
                         </div>
                         {!canReviewCase && !canUploadToCase && !canManageCase && (
                             <p className="text-xs text-muted-foreground mt-3">You do not currently have document workflow permissions for this case.</p>

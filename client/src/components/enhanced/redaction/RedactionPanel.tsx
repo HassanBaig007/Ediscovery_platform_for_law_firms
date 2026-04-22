@@ -109,7 +109,7 @@ export const RedactionPanel = ({ documentId, className }: RedactionPanelProps) =
   const handleApproveRedaction = useCallback(async (redactionId: string) => {
     setIsLoading(true);
     try {
-      await api.post(`/redaction/approve/${redactionId}`, {});
+      await api.post(`/redaction/approve/${redactionId}`, { documentId });
       setRedactions(prev =>
         prev.map(r => r.id === redactionId ? { ...r, isApproved: true } : r)
       );

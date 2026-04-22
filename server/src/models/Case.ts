@@ -8,6 +8,7 @@ export interface ICaseDocument extends Omit<ICase, 'id' | 'createdBy' | 'team'>,
         role: 'LEAD' | 'REVIEWER' | 'PARALEGAL';
         assignedAt: Date;
     }[];
+    lastDocNumber: number;
 }
 
 const CaseSchema: Schema = new Schema({
@@ -22,6 +23,7 @@ const CaseSchema: Schema = new Schema({
         default: 'ACTIVE'
     },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    lastDocNumber: { type: Number, default: 0 },
     team: [{
         user: { type: Schema.Types.ObjectId, ref: 'User' },
         role: {

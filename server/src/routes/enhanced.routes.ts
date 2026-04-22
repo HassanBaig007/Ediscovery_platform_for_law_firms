@@ -11,40 +11,6 @@ const router = Router();
 const getServices = () => getServiceContainer();
 
 // ============================================
-// Search Engine Routes
-// ============================================
-
-router.post('/api/search', protect, requireCaseAccess, async (req: Request, res: Response) => {
-    try {
-        const services = getServices();
-        const { text, filters, page, pageSize } = req.body;
-        
-        const results = await services.searchEngine.search({
-            text,
-            filters,
-            page,
-            pageSize
-        });
-
-        res.json(results);
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Search failed';
-        res.status(500).json({ error: errorMessage });
-    }
-});
-router.get('/api/search/suggest', protect, async (req: Request, res: Response) => {
-    try {
-        const services = getServices();
-        const query = req.query.q as string;
-        const suggestions = await services.searchEngine.suggest(query);
-        res.json({ suggestions });
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Suggestion failed';
-        res.status(500).json({ error: errorMessage });
-    }
-});
-
-// ============================================
 // Collaborative Review Routes
 // ============================================
 
@@ -326,7 +292,7 @@ router.get('/api/logs', protect, adminOnly, async (req: Request, res: Response) 
         const logs = services.logger.getLogs({
             level: level as any,
             component: component as string,
-            limit: limit ? parseInt(limit as string) : undefined
+            limit: limit ? Number.parseInt(limit as string) : undefined
         });
         res.json(logs);
     } catch (error) {

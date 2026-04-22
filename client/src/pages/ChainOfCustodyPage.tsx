@@ -17,17 +17,6 @@ interface Custodian {
   documentCount?: number;
 }
 
-const extractEntityId = (value: unknown): string | null => {
-  if (!value) return null;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object') {
-    const obj = value as { id?: unknown; _id?: unknown };
-    if (typeof obj.id === 'string') return obj.id;
-    if (typeof obj._id === 'string') return obj._id;
-  }
-  return null;
-};
-
 const ChainOfCustodyPage = () => {
   const { id: caseId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -49,37 +38,13 @@ const ChainOfCustodyPage = () => {
         const response = await api.get(`/cases/${caseId}/custodians`);
         const rawCustodians: any[] = Array.isArray(response.data) ? response.data : [];
 
-        let fallbackCounts = new Map<string, number>();
-        const hasServerCounts = rawCustodians.some((custodian) => typeof custodian.documentCount === 'number');
-
-        if (!hasServerCounts) {
-          const documentsResponse = await api.get(`/cases/${caseId}/documents`, {
-            params: { page: 1, limit: 5000 },
-          });
-
-          const docs = Array.isArray(documentsResponse.data?.documents)
-            ? documentsResponse.data.documents
-            : Array.isArray(documentsResponse.data)
-              ? documentsResponse.data
-              : [];
-
-          for (const doc of docs) {
-            const custodianId = extractEntityId(doc?.custodianId);
-            if (!custodianId) continue;
-            fallbackCounts.set(custodianId, (fallbackCounts.get(custodianId) || 0) + 1);
-          }
-        }
-
         const mapped: Custodian[] = rawCustodians.map((custodian: any) => ({
           id: custodian.id || custodian._id,
           name: custodian.name,
           email: custodian.email,
           department: custodian.department,
           title: custodian.title,
-          documentCount:
-            typeof custodian.documentCount === 'number'
-              ? custodian.documentCount
-              : fallbackCounts.get(custodian.id || custodian._id) || 0,
+          documentCount: custodian.documentCount || 0,
         }));
         setCustodians(mapped);
       } catch {

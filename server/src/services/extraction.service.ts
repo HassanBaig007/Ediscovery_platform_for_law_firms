@@ -3,6 +3,7 @@ import pdfParseModule from 'pdf-parse';
 const pdfParse: (buf: Buffer) => Promise<{ text: string }> =
     typeof pdfParseModule === 'function' ? pdfParseModule : (pdfParseModule as any).default ?? pdfParseModule;
 import mammoth from 'mammoth';
+import Tesseract from 'tesseract.js';
 
 /**
  * Extracts text from a file buffer based on its mime type.
@@ -23,6 +24,9 @@ export const extractTextFromBuffer = async (buffer: Buffer, mimeType: string): P
             return result.value;
         } else if (mimeType.startsWith('text/') || mimeType === 'text/plain') {
             return buffer.toString('utf-8');
+        } else if (mimeType.startsWith('image/')) {
+            const { data: { text } } = await Tesseract.recognize(buffer, 'eng');
+            return text;
         } else {
             // Unhandled mime types return an empty string
             return '';

@@ -1,9 +1,6 @@
 // Service Container
 // Dependency injection container for all enhanced components
-
-import { Client } from '@elastic/elasticsearch';
 import { DocumentProcessor } from './document-processor/DocumentProcessor';
-import { SearchEngine } from './search-engine/SearchEngine';
 import { CollaborativeReviewService } from './collaborative-review/CollaborativeReviewService';
 import { RedactionManagerService } from './redaction-manager/RedactionManagerService';
 import { ProductionWorkflowService } from './production-workflow/ProductionWorkflowService';
@@ -12,14 +9,12 @@ import { ErrorHandler } from './platform-stability/ErrorHandler';
 import { TransactionManager } from './platform-stability/TransactionManager';
 import { HealthMonitor } from './platform-stability/HealthMonitor';
 import { OperationalLogger } from './platform-stability/OperationalLogger';
-import { elasticsearchClient } from './search-engine/ElasticsearchClient';
 
 export class ServiceContainer {
     private static instance: ServiceContainer;
     
     // Core services
     public documentProcessor: DocumentProcessor;
-    public searchEngine: SearchEngine;
     public collaborativeReview: CollaborativeReviewService;
     public redactionManager: RedactionManagerService;
     public productionWorkflow: ProductionWorkflowService;
@@ -41,11 +36,7 @@ export class ServiceContainer {
         this.transactionManager = new TransactionManager();
         this.healthMonitor = new HealthMonitor();
 
-        // Initialize core services
         this.documentProcessor = new DocumentProcessor();
-        
-        // Initialize search engine (will be connected during initialize())
-        this.searchEngine = new SearchEngine(null as any); // Will be set during initialize()
 
         this.collaborativeReview = new CollaborativeReviewService();
         this.redactionManager = new RedactionManagerService();
@@ -70,41 +61,13 @@ export class ServiceContainer {
      */
     async initialize(): Promise<void> {
         this.logger.info('ServiceContainer', 'Starting service initialization');
-        const elasticsearchEnabled = process.env.ELASTICSEARCH_ENABLED !== 'false';
 
         try {
-            if (elasticsearchEnabled) {
-                // Connect to Elasticsearch
-                await elasticsearchClient.connect();
-                this.logger.info('ServiceContainer', 'Elasticsearch connected');
-
-                // Set the Elasticsearch client in SearchEngine
-                const esClient = elasticsearchClient.getClient();
-                this.searchEngine = new SearchEngine(esClient);
-
-                // Initialize search engine
-                await this.searchEngine.initialize();
-                this.logger.info('ServiceContainer', 'Search engine initialized');
-            } else {
-                this.logger.warn('ServiceContainer', 'Elasticsearch disabled by configuration (ELASTICSEARCH_ENABLED=false)');
-            }
-
             // Perform health checks
-            await this.performHealthChecks(elasticsearchEnabled);
+            await this.performHealthChecks();
 
             this.logger.info('ServiceContainer', 'All services initialized successfully');
         } catch (error) {
-            if (elasticsearchEnabled) {
-                this.logger.warn('ServiceContainer', 'Elasticsearch unavailable, continuing in degraded mode', {
-                    message: error instanceof Error ? error.message : 'Unknown error'
-                });
-
-                // If Elasticsearch is unavailable, keep the process alive for local development.
-                await this.performHealthChecks(false);
-                this.logger.info('ServiceContainer', 'Core services initialized in degraded mode (search disabled)');
-                return;
-            }
-
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             this.logger.error('ServiceContainer', 'Service initialization failed', error as Error);
             throw new Error(`Service initialization failed: ${errorMessage}`);
@@ -114,24 +77,7 @@ export class ServiceContainer {
     /**
      * Perform health checks on all components
      */
-    private async performHealthChecks(elasticsearchEnabled: boolean): Promise<void> {
-        if (elasticsearchEnabled) {
-            // Check Elasticsearch
-            await this.healthMonitor.performHealthCheck('elasticsearch', async () => {
-                try {
-                    const health = await elasticsearchClient.getHealth();
-                    return {
-                        healthy: health.status === 'green' || health.status === 'yellow',
-                        message: `Cluster status: ${health.status}`
-                    };
-                } catch (error) {
-                    return {
-                        healthy: false,
-                        message: error instanceof Error ? error.message : 'Connection failed'
-                    };
-                }
-            });
-        }
+    private async performHealthChecks(): Promise<void> {
 
         // Check document processor
         await this.healthMonitor.performHealthCheck('document-processor', async () => {
@@ -173,7 +119,6 @@ export class ServiceContainer {
         this.logger.info('ServiceContainer', 'Shutting down services');
 
         try {
-            await elasticsearchClient.close();
             this.logger.info('ServiceContainer', 'All services shut down successfully');
         } catch (error) {
             this.logger.error('ServiceContainer', 'Error during shutdown', error as Error);

@@ -9,20 +9,19 @@ import AuditLog from '../models/AuditLog';
 import Case from '../models/Case';
 import { createNotification } from './notification.controller';
 
-// Helper to generate next document number
+// Helper to generate next document number atomically
 const getNextDocNumber = async (caseId: string): Promise<string> => {
-    const lastDoc = await Document.findOne({ caseId }).sort({ createdAt: -1, docNumber: -1 });
-    // Alphanumeric sort of "DOC-000001", "DOC-000002" works fine.
-
-    let nextNum = 1;
-    if (lastDoc && lastDoc.docNumber) {
-        const parts = lastDoc.docNumber.split('-');
-        if (parts.length === 2 && !Number.isNaN(Number.parseInt(parts[1]))) {
-            nextNum = Number.parseInt(parts[1]) + 1;
-        }
+    const updatedCase = await Case.findByIdAndUpdate(
+        caseId,
+        { $inc: { lastDocNumber: 1 } },
+        { new: true }
+    );
+    
+    if (!updatedCase) {
+        throw new Error('Case not found for document number generation');
     }
 
-    return `DOC-${String(nextNum).padStart(6, '0')}`;
+    return `DOC-${String(updatedCase.lastDocNumber).padStart(6, '0')}`;
 };
 
 // @desc    Upload documents
@@ -49,7 +48,7 @@ export const uploadDocuments = async (req: AuthRequest, res: Response): Promise<
         }
 
         const custodian = await Custodian.findById(custodianId);
-        if (!custodian || custodian.caseId.toString() !== caseId) {
+        if (custodian?.caseId?.toString() !== caseId) {
             res.status(400).json({ message: 'Invalid custodian for this case' });
             return;
         }
@@ -68,7 +67,7 @@ export const uploadDocuments = async (req: AuthRequest, res: Response): Promise<
             // 2. Check for duplicate in THIS CASE
             const existingDoc = await Document.findOne({ caseId, md5Hash });
 
-            let newDoc;
+            let newDoc: any;
 
             if (existingDoc) {
                 // DUPLICATE
@@ -97,9 +96,6 @@ export const uploadDocuments = async (req: AuthRequest, res: Response): Promise<
             } else {
                 // NEW FILE
                 try {
-                    // Extract text
-                    const extractedText = await extractTextFromBuffer(file.buffer, file.mimetype);
-                    
                     const savedFile = await saveFile(file, caseId, custodianId);
                     const docNumber = await getNextDocNumber(caseId);
 
@@ -112,10 +108,15 @@ export const uploadDocuments = async (req: AuthRequest, res: Response): Promise<
                         fileSize: savedFile.size,
                         filePath: savedFile.filePath,
                         md5Hash,
-                        extractedText,
+                        extractedText: 'Processing text extraction...', // Temporary text
                         uploadedBy,
                         isDuplicate: false
                     });
+                    
+                    // Async text extraction (prevents blocking the HTTP response)
+                    extractTextFromBuffer(file.buffer, file.mimetype)
+                        .then(text => Document.findByIdAndUpdate(newDoc._id, { extractedText: text || '' }))
+                        .catch(err => console.error(`Background extraction failed for ${file.originalname}:`, err));
                 } catch (err) {
                     console.error('Error saving/creating document for file:', file.originalname, err);
                     results.push({ filename: file.originalname, error: (err as Error).message });
