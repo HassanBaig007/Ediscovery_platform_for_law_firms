@@ -7,8 +7,12 @@ const storage = multer.memoryStorage();
 
 // File filter
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    const allowedExtensions = /pdf|doc|docx|xls|xlsx|msg|eml|txt/;
-    const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+    const allowedExtensions = new Set([
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.msg', '.eml', '.txt',
+        '.png', '.jpg', '.jpeg', '.gif', '.webp', '.tif', '.tiff', '.bmp'
+    ]);
+    const extension = path.extname(file.originalname).toLowerCase();
+    const extname = allowedExtensions.has(extension);
 
     // Note: Mime type checking can be tricky for MSG/EML, strict extension check is often safer for these legacy formats.
     // For this implementation, we rely on extension.
@@ -16,7 +20,7 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
     if (extname) {
         cb(null, true);
     } else {
-        cb(new Error('Error: File type not allowed! Allowed: PDF, DOC/DOCX, XLS/XLSX, MSG, EML, TXT'));
+        cb(new Error('Error: File type not allowed! Allowed: PDF, DOC/DOCX, XLS/XLSX, MSG, EML, TXT, PNG/JPG/JPEG/GIF/WEBP/TIF/TIFF/BMP'));
     }
 };
 

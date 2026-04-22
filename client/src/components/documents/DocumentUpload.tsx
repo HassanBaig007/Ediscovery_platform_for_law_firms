@@ -91,9 +91,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ caseId, isOpen, onClose
             });
 
             const res = await api.post(`/cases/${caseId}/documents/upload`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
                 onUploadProgress: (progressEvent) => {
                     const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
                     setUploadProgress(percentCompleted);

@@ -2,7 +2,40 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const UPLOAD_DIR = path.join(__dirname, '../../uploads');
+const resolveServerRoot = (): string => {
+    const fromSrcRuntime = path.resolve(__dirname, '../../');
+    if (fs.existsSync(path.join(fromSrcRuntime, 'package.json'))) {
+        return fromSrcRuntime;
+    }
+
+    const fromDistRuntime = path.resolve(__dirname, '../../../../');
+    if (fs.existsSync(path.join(fromDistRuntime, 'package.json'))) {
+        return fromDistRuntime;
+    }
+
+    // Fallback keeps previous behavior if folder structure changes.
+    return fromSrcRuntime;
+};
+
+const SERVER_ROOT = resolveServerRoot();
+const UPLOAD_DIR = path.join(SERVER_ROOT, 'uploads');
+
+const resolveStoredFilePath = (relativePath: string): string => {
+    const normalizedRelativePath = relativePath.replace(/^[/\\]+/, '');
+
+    const primaryPath = path.join(SERVER_ROOT, normalizedRelativePath);
+    if (fs.existsSync(primaryPath)) {
+        return primaryPath;
+    }
+
+    // Legacy fallback: files saved while running compiled code under dist/server.
+    const legacyDistPath = path.resolve(__dirname, '../../', normalizedRelativePath);
+    if (fs.existsSync(legacyDistPath)) {
+        return legacyDistPath;
+    }
+
+    return primaryPath;
+};
 
 // Ensure base upload directory exists (fail-safe)
 try {
@@ -79,7 +112,7 @@ export const saveFile = async (
 };
 
 export const getFileStream = (relativePath: string): fs.ReadStream => {
-    const fullPath = path.join(__dirname, '../../', relativePath);
+    const fullPath = resolveStoredFilePath(relativePath);
     if (!fs.existsSync(fullPath)) {
         throw new Error('File not found');
     }
@@ -87,7 +120,7 @@ export const getFileStream = (relativePath: string): fs.ReadStream => {
 };
 
 export const deleteFile = async (relativePath: string): Promise<void> => {
-    const fullPath = path.join(__dirname, '../../', relativePath);
+    const fullPath = resolveStoredFilePath(relativePath);
     if (fs.existsSync(fullPath)) {
         await fs.promises.unlink(fullPath);
     }

@@ -1,13 +1,32 @@
 import { useAuthStore } from '../store/authStore';
 import { ICase, CaseRole } from '../../../shared/types';
 
-export const useRole = () => {
-    const { user } = useAuthStore();
+const readRoleFromToken = (token?: string | null): string => {
+    if (!token) return '';
 
-    const isAdmin = user?.role === 'ADMIN';
-    const isPartner = user?.role === 'PARTNER' || isAdmin;
-    const isAssociate = user?.role === 'ASSOCIATE';
-    const isParalegal = user?.role === 'PARALEGAL';
+    try {
+        const payloadSegment = token.split('.')[1];
+        if (!payloadSegment) return '';
+
+        const base64 = payloadSegment.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+        const payload = JSON.parse(atob(padded)) as { role?: unknown };
+
+        return typeof payload.role === 'string' ? payload.role : '';
+    } catch {
+        return '';
+    }
+};
+
+export const useRole = () => {
+    const { user, accessToken } = useAuthStore();
+    const tokenRole = readRoleFromToken(accessToken);
+    const normalizedRole = (user?.role ?? tokenRole).trim().toUpperCase();
+
+    const isAdmin = normalizedRole === 'ADMIN';
+    const isPartner = normalizedRole === 'PARTNER' || isAdmin;
+    const isAssociate = normalizedRole === 'ASSOCIATE';
+    const isParalegal = normalizedRole === 'PARALEGAL';
     const hasFullAccess = isAdmin || isPartner;
     const canUpload = isAdmin || isPartner || isParalegal;
     const canReview = isAdmin || isPartner || isAssociate;

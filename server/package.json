@@ -11,7 +11,7 @@
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/server/src/server.js",
     "dev": "nodemon src/server.ts",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:noreset": "ts-node src/scripts/seed.ts --no-reset"

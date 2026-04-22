@@ -31,6 +31,17 @@ interface Custodian {
   createdAt: string;
 }
 
+const extractEntityId = (value: unknown): string | null => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    const obj = value as { id?: unknown; _id?: unknown };
+    if (typeof obj.id === 'string') return obj.id;
+    if (typeof obj._id === 'string') return obj._id;
+  }
+  return null;
+};
+
 const CustodiansPage = () => {
   const { id: caseId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -72,7 +83,36 @@ const CustodiansPage = () => {
     setIsLoading(true);
     try {
       const response = await api.get(`/cases/${caseId}/custodians`);
-      setCustodians(response.data || []);
+      const rawCustodians: Custodian[] = Array.isArray(response.data) ? response.data : [];
+      const hasServerCounts = rawCustodians.some((custodian) => typeof custodian.documentCount === 'number');
+
+      if (hasServerCounts) {
+        setCustodians(rawCustodians);
+      } else {
+        const documentsResponse = await api.get(`/cases/${caseId}/documents`, {
+          params: { page: 1, limit: 5000 },
+        });
+
+        const docs = Array.isArray(documentsResponse.data?.documents)
+          ? documentsResponse.data.documents
+          : Array.isArray(documentsResponse.data)
+            ? documentsResponse.data
+            : [];
+
+        const countMap = new Map<string, number>();
+        for (const doc of docs) {
+          const custodianId = extractEntityId(doc?.custodianId);
+          if (!custodianId) continue;
+          countMap.set(custodianId, (countMap.get(custodianId) || 0) + 1);
+        }
+
+        const merged = rawCustodians.map((custodian) => ({
+          ...custodian,
+          documentCount: countMap.get(custodian.id || (custodian as any)._id) || 0,
+        }));
+
+        setCustodians(merged);
+      }
     } catch (error) {
       console.error('Error fetching custodians:', error);
       setCustodians([]);

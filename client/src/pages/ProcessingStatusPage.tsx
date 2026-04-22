@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Clock, Loader2, FileText, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Clock, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Progress } from '../components/ui/Progress';
 import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
 import { analyticsService, CaseAnalytics } from '../services/analytics.service';
@@ -62,34 +61,23 @@ const ProcessingStatusPage = () => {
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-primary/10"><CardContent className="p-4"><p className="text-xs uppercase font-bold text-primary">Total Documents</p><p className="text-2xl font-bold">{analytics?.totalDocuments ?? 0}</p></CardContent></Card>
-            <Card className="bg-success/10"><CardContent className="p-4"><p className="text-xs uppercase font-bold text-success">Reviewed</p><p className="text-2xl font-bold">{analytics?.reviewedDocuments ?? 0}</p></CardContent></Card>
-            <Card className="bg-warning/10"><CardContent className="p-4"><p className="text-xs uppercase font-bold text-warning">Pending</p><p className="text-2xl font-bold">{analytics?.pendingDocuments ?? 0}</p></CardContent></Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /> Processing Progress</CardTitle>
-              <CardDescription>Completion percentage based on reviewed versus total documents.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Progress value={analytics?.reviewProgress ?? 0} className="h-3" />
-              <p className="text-sm text-muted-foreground">{analytics?.reviewProgress ?? 0}% complete</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-muted flex items-center justify-between">
-                  <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /><span className="text-sm">Ingestion Queue</span></div>
-                  <span className="font-semibold">{(analytics?.pendingDocuments ?? 0) > 0 ? `${analytics?.pendingDocuments} pending` : 'All ingested'}</span>
-                </div>
-                <div className="p-3 rounded-lg bg-muted flex items-center justify-between">
-                  <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /><span className="text-sm">Review Throughput</span></div>
-                  <span className="font-semibold">{(analytics?.reviewProgress ?? 0) >= 100 ? 'Complete' : (analytics?.reviewProgress ?? 0) >= 50 ? 'On track' : 'Needs attention'}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /> Processing Status</CardTitle>
+            <CardDescription>Live queue counters were removed from this page to avoid misleading mock-style values.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {analytics && analytics.totalDocuments > 0
+                ? 'Documents are available in this case. Use the data grid for real-time ingestion and review state.'
+                : 'No documents have been ingested in this case yet.'}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => navigate(`/cases/${caseId}`)}>Back to Case</Button>
+              <Button onClick={() => navigate(`/cases/${caseId}/search`)}>Open Data Grid</Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

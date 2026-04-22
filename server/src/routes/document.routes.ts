@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect, requireCaseAccess, requireCaseRole } from '../middleware/authMiddleware';
-import { uploadDocuments, getDocuments, downloadDocument, getDocumentById, checkDuplicate, getDocumentCodingHistory, deleteDocumentById } from '../controllers/document.controller';
+import { uploadDocuments, getDocuments, downloadDocument, previewDocument, getDocumentById, checkDuplicate, getDocumentCodingHistory, deleteDocumentById } from '../controllers/document.controller';
 import { advancedSearch, exportDocuments, deleteSavedSearch } from '../controllers/search.controller';
 import upload from '../middleware/upload.middleware';
 
@@ -22,12 +22,33 @@ router.get('/cases/:caseId/documents',
     getDocuments
 );
 
+// Duplicate detection routes must be declared before /documents/:id routes.
+// Otherwise GET /documents/check-duplicate is matched by /documents/:id.
+router.get('/documents/check-duplicate',
+    protect,
+    requireCaseAccess,
+    checkDuplicate
+);
+
+router.post('/documents/check-duplicate',
+    protect,
+    requireCaseAccess,
+    checkDuplicate
+);
+
 // Document-scoped routes
 // GET /api/documents/:id/download
 router.get('/documents/:id/download',
     protect,
     requireCaseAccess,
     downloadDocument
+);
+
+// GET /api/documents/:id/preview
+router.get('/documents/:id/preview',
+    protect,
+    requireCaseAccess,
+    previewDocument
 );
 
 // GET /api/documents/:id
@@ -49,20 +70,6 @@ router.get('/documents/:id/coding-history',
     protect,
     requireCaseAccess,
     getDocumentCodingHistory
-);
-
-// GET /api/documents/check-duplicate?caseId=X&md5Hash=Y
-router.get('/documents/check-duplicate',
-    protect,
-    requireCaseAccess,
-    checkDuplicate
-);
-
-// POST /api/documents/check-duplicate
-router.post('/documents/check-duplicate',
-    protect,
-    requireCaseAccess,
-    checkDuplicate
 );
 
 // POST /api/documents/search

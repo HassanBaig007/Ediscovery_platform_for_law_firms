@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import Custodian from '../models/Custodian';
 import Case from '../models/Case';
 import Document from '../models/Document';
@@ -10,8 +11,32 @@ import { AuthRequest } from '../middleware/authMiddleware';
 export const getCustodians = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const { caseId } = req.params as { caseId: string };
-        const custodians = await Custodian.find({ caseId: caseId as any }).sort({ createdAt: -1 });
-        res.json(custodians);
+
+        if (!mongoose.Types.ObjectId.isValid(caseId)) {
+            res.status(400).json({ message: 'Invalid case id' });
+            return;
+        }
+
+        const caseObjectId = new mongoose.Types.ObjectId(caseId);
+
+        const [custodians, documentCounts] = await Promise.all([
+            Custodian.find({ caseId: caseObjectId }).sort({ createdAt: -1 }),
+            Document.aggregate<{ _id: mongoose.Types.ObjectId; documentCount: number }>([
+                { $match: { caseId: caseObjectId } },
+                { $group: { _id: '$custodianId', documentCount: { $sum: 1 } } }
+            ])
+        ]);
+
+        const countMap = new Map(
+            documentCounts.map((item) => [item._id.toString(), item.documentCount])
+        );
+
+        const responsePayload = custodians.map((custodian) => ({
+            ...custodian.toJSON(),
+            documentCount: countMap.get(custodian._id.toString()) ?? 0
+        }));
+
+        res.json(responsePayload);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: (error as Error).message });
     }

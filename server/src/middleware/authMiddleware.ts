@@ -17,6 +17,8 @@ export interface AuthRequest extends Request {
     };
 }
 
+const normalizeRole = (role?: string): string => (role ?? '').trim().toUpperCase();
+
 export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
     let token;
 
@@ -42,7 +44,7 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
 };
 
 export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (req.user?.role === 'ADMIN') {
+    if (normalizeRole(req.user?.role) === 'ADMIN') {
         next();
     } else {
         res.status(403).json({ success: false, message: 'Not authorized as an admin' });
@@ -59,8 +61,10 @@ export const authorize = (...roles: string[]) => {
             return;
         }
 
-        // console.log('Authorize Check:', { required: roles, userRole: req.user.role });
-        if (!roles.includes(req.user.role)) {
+        const requiredRoles = roles.map((role) => normalizeRole(role));
+        const userRole = normalizeRole(req.user.role);
+
+        if (!requiredRoles.includes(userRole)) {
             console.log(`Auth Failed: User ${req.user.role} not in [${roles.join(', ')}]`);
             // Note: If roles includes 'LEAD' which is a CaseRole, this check will fail for a user with 'ASSOCIATE' global role.
             // This suggests we might need a `protectCase` middleware that loads the case and checks team role.
@@ -97,17 +101,23 @@ const getCaseContext = async (userId: string, caseId: string) => {
 };
 
 const loadCaseIdFromRequest = async (req: AuthRequest): Promise<string | null> => {
-    const fromCaseParam = req.params.caseId || req.params.id;
-    if (typeof fromCaseParam === 'string' && fromCaseParam.length > 0 && req.route?.path?.toString().includes('cases')) {
-        return fromCaseParam;
+    if (typeof req.params?.caseId === 'string' && req.params.caseId.length > 0) {
+        return req.params.caseId;
     }
 
-    if (req.params.id && req.baseUrl.includes('documents')) {
+    const routeHint = [
+        req.baseUrl ?? '',
+        req.path ?? '',
+        req.originalUrl ?? '',
+        req.route?.path?.toString() ?? ''
+    ].join(' ').toLowerCase();
+
+    if (req.params.id && routeHint.includes('/documents/')) {
         const doc = await Document.findById(req.params.id).select('caseId');
         return doc ? doc.caseId.toString() : null;
     }
 
-    if (req.params.id && req.baseUrl.includes('productions')) {
+    if (req.params.id && routeHint.includes('/productions/')) {
         const production = await Production.findById(req.params.id).select('caseId');
         return production ? production.caseId.toString() : null;
     }
@@ -116,12 +126,12 @@ const loadCaseIdFromRequest = async (req: AuthRequest): Promise<string | null> =
         return production ? production.caseId.toString() : null;
     }
 
-    if (req.params.id && req.baseUrl.includes('custodians')) {
+    if (req.params.id && routeHint.includes('/custodians/')) {
         const custodian = await Custodian.findById(req.params.id).select('caseId');
         return custodian ? custodian.caseId.toString() : null;
     }
 
-    if (req.params.id && req.baseUrl.includes('tags')) {
+    if (req.params.id && routeHint.includes('/tags/')) {
         const tag = await IssueTag.findById(req.params.id).select('caseId');
         return tag ? tag.caseId.toString() : null;
     }
@@ -165,7 +175,7 @@ export const requireCaseAccess = async (req: AuthRequest, res: Response, next: N
             return;
         }
 
-        const elevatedByGlobalRole = GLOBAL_ELEVATED_ROLES.has(req.user.role);
+        const elevatedByGlobalRole = GLOBAL_ELEVATED_ROLES.has(normalizeRole(req.user.role));
         const context = await getCaseContext(req.user._id.toString(), caseId);
         if (!context.exists) {
             res.status(404).json({ message: 'Case not found' });
@@ -203,7 +213,10 @@ export const requireCaseRole = (...roles: Array<'LEAD' | 'REVIEWER' | 'PARALEGAL
                     return;
                 }
 
-                if (!req.caseContext?.role || !roles.includes(req.caseContext.role)) {
+                const requiredRoles = roles.map((role) => normalizeRole(role));
+                const currentCaseRole = normalizeRole(req.caseContext?.role);
+
+                if (!currentCaseRole || !requiredRoles.includes(currentCaseRole)) {
                     res.status(403).json({ message: 'Insufficient case role for this operation' });
                     return;
                 }

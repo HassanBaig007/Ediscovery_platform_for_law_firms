@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -15,6 +15,7 @@ import api from '../services/api';
 import SparkMD5 from 'spark-md5';
 import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
+import { useCaseStore } from '../store/caseStore';
 
 interface UploadFile {
   id: string;
@@ -39,18 +40,28 @@ interface Custodian {
 const UploadPage = () => {
   const { id: caseId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { canUpload } = useRole();
+  const { hasFullAccess, getCaseRole } = useRole();
+  const { currentCase, fetchCaseById, isLoading: isCaseLoading } = useCaseStore();
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [custodians, setCustodians] = useState<Custodian[]>([]);
   const [selectedCustodian, setSelectedCustodian] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadStats, setUploadStats] = useState({
     total: 0,
     completed: 0,
     duplicates: 0,
     errors: 0,
   });
+
+  useEffect(() => {
+    if (caseId && (!currentCase || currentCase.id !== caseId)) {
+      fetchCaseById(caseId).catch(() => {
+        // Case fetch failures are handled by upload endpoint authorization.
+      });
+    }
+  }, [caseId, currentCase, fetchCaseById]);
 
   useEffect(() => {
     const fetchCustodians = async () => {
@@ -69,6 +80,9 @@ const UploadPage = () => {
     };
     if (caseId) fetchCustodians();
   }, [caseId]);
+
+  const caseRole = currentCase && currentCase.id === caseId ? getCaseRole(currentCase) : null;
+  const canUploadToCase = hasFullAccess || caseRole === 'LEAD' || caseRole === 'PARALEGAL';
 
   const addFiles = useCallback((newFiles: File[]) => {
     const uploadFiles: UploadFile[] = newFiles.map(f => ({
@@ -106,6 +120,12 @@ const UploadPage = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     addFiles(selectedFiles);
+    // Allow selecting the same file again after removing/retrying.
+    e.target.value = '';
+  };
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click();
   };
 
   const removeFile = (id: string) => {
@@ -187,11 +207,10 @@ const UploadPage = () => {
     }
 
     try {
-      const response = await api.get('/documents/check-duplicate', {
-        params: {
-          caseId,
-          md5Hash,
-        }
+      // Use POST so this endpoint cannot be shadowed by GET /documents/:id routes.
+      const response = await api.post('/documents/check-duplicate', {
+        caseId,
+        md5Hash,
       });
 
       const masterDocId = response.data.masterDocId
@@ -241,7 +260,6 @@ const UploadPage = () => {
       formData.append('md5Hash', md5Hash);
 
       await api.post(`/cases/${caseId}/documents/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent: { total?: number; loaded: number }) => {
           const progress = progressEvent.total
             ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
@@ -258,10 +276,20 @@ const UploadPage = () => {
           : f
       ));
       setUploadStats(prev => ({ ...prev, completed: prev.completed + 1 }));
-    } catch {
+    } catch (error) {
+      const apiError = error as {
+        response?: { data?: { message?: string; error?: string } };
+        message?: string;
+      };
+      const primaryMessage = apiError.response?.data?.message;
+      const fallbackDetail = apiError.response?.data?.error;
+      const errorMessage =
+        primaryMessage && primaryMessage !== 'Server error during upload'
+          ? primaryMessage
+          : fallbackDetail || primaryMessage || apiError.message || 'Upload failed';
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id 
-          ? { ...f, status: 'error', error: 'Upload failed' }
+          ? { ...f, status: 'error', error: errorMessage }
           : f
       ));
       setUploadStats(prev => ({ ...prev, errors: prev.errors + 1 }));
@@ -302,8 +330,8 @@ const UploadPage = () => {
   const pendingCount = files.filter(f => f.status === 'pending').length;
   const canUploadFiles = pendingCount > 0 && selectedCustodian && !isUploading;
 
-  if (!canUpload) {
-    return <PermissionDenied requiredRole="ADMIN, PARTNER, or PARALEGAL" />;
+  if (!hasFullAccess && !isCaseLoading && currentCase?.id === caseId && !canUploadToCase) {
+    return <PermissionDenied requiredRole="Case LEAD/PARALEGAL, PARTNER, or ADMIN" />;
   }
 
   return (
@@ -410,6 +438,18 @@ const UploadPage = () => {
               </Badge>
             )}
           </div>
+          {custodians.length === 0 && (
+            <div className="mt-3 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+              No custodians found for this case. Add at least one custodian before uploading documents.
+              <Button
+                variant="link"
+                className="ml-1 h-auto p-0 text-warning underline"
+                onClick={() => navigate(`/cases/${caseId}/custodians`)}
+              >
+                Go to Custodians
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -438,15 +478,14 @@ const UploadPage = () => {
           <input 
             type="file" 
             multiple
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.msg,.eml,.txt,.png,.jpg,.jpeg,.gif,.webp,.tif,.tiff,.bmp"
             onChange={handleFileSelect}
             className="hidden"
-            id="file-upload"
+            ref={fileInputRef}
           />
-          <label htmlFor="file-upload" className="inline-flex">
-            <Button variant="outline" className="cursor-pointer">
-              Select Files
-            </Button>
-          </label>
+          <Button type="button" variant="outline" className="cursor-pointer" onClick={openFilePicker}>
+            Select Files
+          </Button>
 
           <p className="text-xs text-muted-foreground mt-4">
             Supported: PDF, Word, Excel, Images, Email files (max 50MB each)

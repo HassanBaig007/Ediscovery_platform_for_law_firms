@@ -254,6 +254,39 @@ export const downloadDocument = async (req: AuthRequest, res: Response): Promise
     }
 };
 
+// @desc    Inline preview document stream
+// @route   GET /api/documents/:id/preview
+// @access  Private
+export const previewDocument = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params as { id: string };
+
+        const document = await Document.findById(id);
+        if (!document) {
+            res.status(404).json({ message: 'Document not found' });
+            return;
+        }
+
+        await logAction(req.user!._id, 'DOCUMENT_VIEW', 'Document', document._id, { preview: true }, req.ip);
+
+        const fileStream = getFileStream(document.filePath);
+
+        res.setHeader('Content-Disposition', `inline; filename="${document.filename}"`);
+        res.setHeader('Content-Type', document.fileType || 'application/octet-stream');
+
+        fileStream.on('error', (err) => {
+            console.error('File stream error:', err);
+            if (!res.headersSent) {
+                res.status(404).json({ message: 'Physical file not found on server' });
+            }
+        });
+
+        fileStream.pipe(res);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: (error as Error).message });
+    }
+};
+
 // @desc    Get single document by ID
 // @route   GET /api/documents/:id
 // @access  Private
