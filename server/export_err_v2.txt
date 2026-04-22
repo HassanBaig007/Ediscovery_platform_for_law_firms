@@ -1,0 +1,42 @@
+﻿
+> verify_results_v2.log:25
+0:Export failed: {
+  verify_results_v2.log:25
+1:  success: false,
+  verify_results_v2.log:25
+2:  message: 'Not Found - 
+  verify_results_v2.log:25
+3:/api/documents/export',
+  verify_results_v2.log:25
+4:  error: 'Error: Not 
+  verify_results_v2.log:25
+5:Found - 
+  verify_results_v2.log:25
+6:/api/documents/export\n'
+ +
+  verify_results_v2.log:25
+7:    '    at 
+  verify_results_v2.log:25
+8:notFoundHandler 
+(C:\\Users
+  verify_results_v2.log:25
+9:\\Hassa\\Desktop\\MAJOR_
+PR
+  verify_results_v2.log:26
+0:OJECT_4THSEM\\ediscovery
+-p
+  verify_results_v2.log:26
+1:latform\\server\\src\\mi
+dd
+  verify_results_v2.log:26
+2:leware\\errorMiddleware.
+ts
+  verify_results_v2.log:26
+3::24:19)\n' +
+  verify_results_v2.log:26
+4:    '    at 
+  verify_results_v2.log:26
+5:Layer.handleRequest 
+(C:\\U
+
+

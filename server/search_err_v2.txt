@@ -1,0 +1,57 @@
+﻿
+> verify_results_v2.log:8:
+node.exe : Search failed: 
+  
+verify_results_v2.log:9:{
+  verify_results_v2.log:10
+:At line:1 char:1
+  verify_results_v2.log:11
+:+ & "C:\Program 
+  verify_results_v2.log:12
+:Files\nodejs/node.exe" 
+"C:
+  verify_results_v2.log:13
+:\Users\Hassa\AppData\Roam
+i
+  verify_results_v2.log:14
+:ng\ ...
+  verify_results_v2.log:15
+:+ 
+~~~~~~~~~~~~~~~~~~~~~~~~
+  verify_results_v2.log:16
+:~~~~~~~~~~~~~~~~~~~~~~~~~
+~
+  verify_results_v2.log:17
+:~~~~~~~~~~~~~~~~~~~
+  
+verify_results_v2.log:18: 
+   + CategoryInfo        
+> verify_results_v2.log:99
+:Save Search failed: {
+  verify_results_v2.log:10
+0:  success: false,
+  verify_results_v2.log:10
+1:  message: 'Not Found - 
+/a
+  verify_results_v2.log:10
+2:pi/cases/697bb8fb34a49ea
+3b
+  verify_results_v2.log:10
+3:61fd8f7/saved-searches',
+  verify_results_v2.log:10
+4:  error: 'Error: Not 
+  verify_results_v2.log:10
+5:Found - 
+/api/cases/697bb8f
+  verify_results_v2.log:10
+6:b34a49ea3b61fd8f7/saved-
+se
+  verify_results_v2.log:10
+7:arches\n' +
+  verify_results_v2.log:10
+8:    '    at 
+  verify_results_v2.log:10
+9:notFoundHandler 
+(C:\\Users
+
+

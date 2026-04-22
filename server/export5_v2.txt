@@ -1,0 +1,50 @@
+﻿
+> verify5.log:253:/api/doc
+uments/export',
+  verify5.log:254:  
+error: 'Error: Not 
+  verify5.log:255:Found - 
+> verify5.log:256:/api/doc
+uments/export\n' +
+  verify5.log:257:    '   
+ at 
+  verify5.log:258:notFound
+Handler (C:\\Users
+  verify5.log:259:\\Hassa\
+\Desktop\\MAJOR_PR
+  verify5.log:260:OJECT_4T
+HSEM\\ediscovery-p
+  verify5.log:261:latform\
+\server\\src\\midd
+  verify5.log:262:leware\\
+errorMiddleware.ts
+  verify5.log:263::24:19)\
+n' +
+  verify5.log:264:    '   
+ at 
+  verify5.log:265:Layer.ha
+ndleRequest (C:\\U
+  verify5.log:266:sers\\Ha
+ssa\\Desktop\\MAJO
+  verify5.log:267:R_PROJEC
+T_4THSEM\\ediscove
+  verify5.log:268:ry-platf
+orm\\server\\node_
+  verify5.log:269:modules\
+\router\\lib\\laye
+  verify5.log:270:r.js:152
+:17)\n' +
+  verify5.log:271:    '   
+ at trimPrefix (C:
+  verify5.log:272:\\Users\
+\Hassa\\Desktop\\M
+  verify5.log:273:AJOR_PRO
+JECT_4THSEM\\edisc
+  verify5.log:274:overy-pl
+atform\\server\\no
+  verify5.log:275:de_modul
+es\\router\\index.
+  verify5.log:276:js:342:1
+3)\n' +
+
+

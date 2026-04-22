@@ -1,0 +1,235 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* ── Core surfaces (warmer, softer) ── */
+        --background: 220 16% 98%;
+        --foreground: 224 71% 4%;
+
+        --card: 0 0% 100%;
+        --card-foreground: 224 71% 4%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 224 71% 4%;
+
+        /* ── Primary – rich indigo-blue ── */
+        --primary: 221 83% 53%;
+        --primary-foreground: 210 40% 98%;
+
+        /* ── Secondary ── */
+        --secondary: 220 14% 96%;
+        --secondary-foreground: 220 10% 38%;
+
+        /* ── Muted ── */
+        --muted: 220 14% 96%;
+        /* Darker than before to keep AA contrast on light surfaces */
+        --muted-foreground: 220 10% 38%;
+
+        /* ── Accent – vivid teal ── */
+        --accent: 172 66% 50%;
+        --accent-foreground: 224 71% 4%;
+
+        /* ── Semantic: success ── */
+        --success: 152 69% 40%;
+        --success-foreground: 210 40% 98%;
+
+        /* ── Semantic: warning ── */
+        --warning: 38 92% 50%;
+        --warning-foreground: 224 71% 4%;
+
+        /* ── Destructive ── */
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 210 40% 98%;
+
+        /* ── Semantic: info ── */
+        --info: 199 89% 48%;
+        --info-foreground: 210 40% 98%;
+
+        /* ── Semantic: purple (for roles, special badges) ── */
+        --purple: 280 67% 55%;
+        --purple-foreground: 210 40% 98%;
+
+        /* ── Chrome ── */
+        --border: 220 13% 91%;
+        --input: 220 13% 91%;
+        --ring: 221 83% 53%;
+
+        --radius: 0.75rem;
+        --header-height: 3.5rem;
+
+        /* ── Sidebar palette (light) ── */
+        --sidebar-bg: 225 30% 12%;
+        --sidebar-fg: 220 14% 96%;
+        /* Ensure readable labels on dark sidebar */
+        --sidebar-muted: 220 12% 72%;
+        --sidebar-border: 220 20% 22%;
+        --sidebar-accent: 221 83% 60%;
+    }
+
+    .dark {
+        --background: 224 47% 7%;
+        --foreground: 213 31% 91%;
+
+        --card: 224 47% 10%;
+        --card-foreground: 213 31% 91%;
+
+        --popover: 224 47% 10%;
+        --popover-foreground: 213 31% 91%;
+
+        --primary: 217 91% 60%;
+        --primary-foreground: 224 47% 7%;
+
+        --secondary: 223 40% 16%;
+        --secondary-foreground: 215 20% 78%;
+
+        --muted: 223 40% 16%;
+        --muted-foreground: 218 12% 68%;
+
+        --accent: 172 66% 50%;
+        --accent-foreground: 224 47% 7%;
+
+        --success: 152 69% 46%;
+        --success-foreground: 224 47% 7%;
+
+        --warning: 38 92% 60%;
+        --warning-foreground: 224 47% 7%;
+
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 213 31% 91%;
+
+        --info: 199 89% 55%;
+        --info-foreground: 224 47% 7%;
+
+        --purple: 280 67% 65%;
+        --purple-foreground: 224 47% 7%;
+
+        --border: 222 38% 18%;
+        --input: 222 38% 18%;
+        --ring: 217 91% 60%;
+
+        /* ── Sidebar palette (dark) ── */
+        --sidebar-bg: 225 30% 9%;
+        --sidebar-fg: 213 31% 91%;
+        --sidebar-muted: 218 12% 68%;
+        --sidebar-border: 222 38% 18%;
+        --sidebar-accent: 217 91% 60%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground antialiased;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    h1, h2, h3, h4 {
+        font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+        letter-spacing: -0.025em;
+    }
+
+    code, pre, .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+    }
+}
+
+@layer utilities {
+    /* Semantic typography helpers (use in pages/components) */
+    .text-page-title {
+        @apply font-display text-2xl md:text-3xl font-bold tracking-tight text-foreground;
+    }
+    .text-page-subtitle {
+        @apply text-sm md:text-base text-muted-foreground;
+    }
+    .text-section-title {
+        @apply text-sm font-semibold text-muted-foreground uppercase tracking-wider;
+    }
+    .text-micro {
+        @apply text-xs text-muted-foreground;
+    }
+}
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+    transition: background-color 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+}
+
+/* ── AG Grid theme ── */
+.ag-theme-quartz,
+.ag-theme-quartz-dark {
+    --ag-background-color: hsl(var(--card));
+    --ag-header-background-color: hsl(var(--muted));
+    --ag-odd-row-background-color: hsl(var(--muted) / 0.3);
+    --ag-row-hover-color: hsl(var(--primary) / 0.06);
+    --ag-selected-row-background-color: hsl(var(--primary) / 0.1);
+    --ag-border-color: hsl(var(--border));
+    --ag-header-foreground-color: hsl(var(--foreground));
+    --ag-foreground-color: hsl(var(--foreground));
+    --ag-font-family: 'Inter', system-ui, sans-serif;
+    --ag-font-size: 13px;
+    --ag-row-border-color: hsl(var(--border));
+    --ag-range-selection-border-color: hsl(var(--primary));
+    --ag-checkbox-checked-color: hsl(var(--primary));
+    --ag-input-focus-border-color: hsl(var(--primary));
+    --ag-border-radius: 0px;
+    --ag-wrapper-border-radius: 0.75rem;
+    --ag-header-height: 44px;
+    --ag-row-height: 48px;
+    --ag-header-column-separator-display: block;
+    --ag-header-column-separator-color: hsl(var(--border));
+    --ag-header-column-separator-height: 50%;
+}
+
+/* ── Selection highlight ── */
+::selection {
+    background: hsl(var(--primary) / 0.18);
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ── Focus-visible global ring ── */
+:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ── Reusable utility: semantic card hover lift ── */
+@layer utilities {
+    .card-hover {
+        @apply transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-elevation-2;
+    }
+
+    .glass {
+        @apply bg-card/80 backdrop-blur-xl supports-[backdrop-filter]:bg-card/60;
+    }
+}

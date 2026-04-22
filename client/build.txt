@@ -1,0 +1,16 @@
+src/pages/Review.tsx(117,79): error TS1127: Invalid character.
+src/pages/Review.tsx(117,101): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/pages/Review.tsx(117,102): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/pages/Review.tsx(119,19): error TS17002: Expected corresponding JSX closing tag for 'div'.
+src/pages/Review.tsx(135,13): error TS1005: ')' expected.
+src/pages/Review.tsx(207,9): error TS1128: Declaration or statement expected.
+src/pages/Review.tsx(208,5): error TS1109: Expression expected.
+src/pages/Review.tsx(209,1): error TS1128: Declaration or statement expected.
+src/pages/Search.tsx(62,85): error TS1127: Invalid character.
+src/pages/Search.tsx(62,107): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/pages/Search.tsx(62,108): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/pages/Search.tsx(64,23): error TS17002: Expected corresponding JSX closing tag for 'div'.
+src/pages/Search.tsx(89,14): error TS1005: ')' expected.
+src/pages/Search.tsx(167,9): error TS1128: Declaration or statement expected.
+src/pages/Search.tsx(168,5): error TS1109: Expression expected.
+src/pages/Search.tsx(169,1): error TS1128: Declaration or statement expected.

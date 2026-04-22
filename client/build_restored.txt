@@ -1,0 +1,12 @@
+src/components/review/CodingPanel.tsx(17,51): error TS6133: 'setValue' is declared but its value is never read.
+src/context/ReviewContext.tsx(2,17): error TS2307: Cannot find module '../utils/api' or its corresponding type declarations.
+src/context/ReviewContext.tsx(75,50): error TS6133: 'skipIds' is declared but its value is never read.
+src/pages/CaseDetail.tsx(8,34): error TS6133: 'Users' is declared but its value is never read.
+src/pages/CaseDetail.tsx(9,30): error TS6133: 'Shield' is declared but its value is never read.
+src/pages/CaseDetail.tsx(17,12): error TS6133: 'activeTab' is declared but its value is never read.
+src/pages/Review.tsx(9,18): error TS6133: 'AnimatePresence' is declared but its value is never read.
+src/pages/Review.tsx(168,59): error TS2304: Cannot find name 'cn'.
+src/pages/Review.tsx(176,55): error TS2304: Cannot find name 'cn'.
+src/pages/Review.tsx(188,48): error TS2304: Cannot find name 'cn'.
+src/pages/Review.tsx(191,54): error TS2304: Cannot find name 'cn'.
+src/pages/Search.tsx(16,11): error TS6133: 'navigate' is declared but its value is never read.

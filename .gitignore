@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build artifacts
+dist/
+build/
+client/dist/
+server/dist/
+coverage/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Runtime/output
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Optional local uploads/data
+server/uploads/

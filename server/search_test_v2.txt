@@ -1,0 +1,48 @@
+﻿
+> 
+verify_results.log:7:--- 
+Testing Advanced Search 
+---
+  verify_results.log:8:nod
+e.exe : Search 
+  verify_results.log:9:fai
+led: {
+  
+verify_results.log:10:At 
+line:1 char:1
+  verify_results.log:11:+ 
+& "C:\Program Files
+  verify_results.log:12:\n
+odejs/node.exe" "C:
+  verify_results.log:13:\U
+sers\Hassa\AppData\
+  verify_results.log:14:Ro
+aming\ ...
+  verify_results.log:15:+ 
+~~~~~~~~~~~~~~~~~~~
+  verify_results.log:16:~~
+~~~~~~~~~~~~~~~~~~~
+  verify_results.log:17:~~
+~~~~~~~~~~~~~~~~~~~
+  verify_results.log:18:~~
+~~~~~~
+  verify_results.log:19:  
+  + CategoryInfo   
+  verify_results.log:20:  
+         : NotSpe  
+  verify_results.log:21:  
+cified: (Search    
+  verify_results.log:22: 
+failed: {:String    
+  verify_results.log:23:) 
+[], RemoteExce    
+  verify_results.log:24:pt
+ion
+  verify_results.log:25:  
+  + FullyQualified 
+  verify_results.log:26:  
+ ErrorId : Native  
+  verify_results.log:27:  
+CommandError
+
+

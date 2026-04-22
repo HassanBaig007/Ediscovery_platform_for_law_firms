@@ -1,0 +1,44 @@
+﻿
+> verify5.log:250:Export 
+failed: {
+  verify5.log:251:  
+success: false,
+  verify5.log:252:  
+message: 'Not Found - 
+  verify5.log:253:/api/doc
+uments/export',
+  verify5.log:254:  
+error: 'Error: Not 
+  verify5.log:255:Found - 
+  verify5.log:256:/api/doc
+uments/export\n' +
+  verify5.log:257:    '   
+ at 
+  verify5.log:258:notFound
+Handler (C:\\Users
+  verify5.log:259:\\Hassa\
+\Desktop\\MAJOR_PR
+  verify5.log:260:OJECT_4T
+HSEM\\ediscovery-p
+  verify5.log:261:latform\
+\server\\src\\midd
+  verify5.log:262:leware\\
+errorMiddleware.ts
+  verify5.log:263::24:19)\
+n' +
+  verify5.log:264:    '   
+ at 
+  verify5.log:265:Layer.ha
+ndleRequest (C:\\U
+  verify5.log:266:sers\\Ha
+ssa\\Desktop\\MAJO
+  verify5.log:267:R_PROJEC
+T_4THSEM\\ediscove
+  verify5.log:268:ry-platf
+orm\\server\\node_
+  verify5.log:269:modules\
+\router\\lib\\laye
+  verify5.log:270:r.js:152
+:17)\n' +
+
+

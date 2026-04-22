@@ -1,0 +1,431 @@
+﻿import { useState, useEffect } from 'react';
+import {
+  TrendingUp, Users, FileText, Clock,
+  CheckCircle, BarChart3, PieChart as PieChartIcon,
+  Activity, Download, Loader2
+} from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { StatCard } from '../components/ui/StatCard';
+import { SelectField } from '../components/ui/SelectField';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, AreaChart, Area,
+} from 'recharts';
+import { cn } from '../lib/utils';
+import api from '../services/api';
+import { useToastStore } from '../store/toastStore';
+
+const CHART_COLORS = [
+  'hsl(217, 91%, 60%)',   // primary blue
+  'hsl(142, 76%, 36%)',   // success green
+  'hsl(280, 67%, 55%)',   // purple
+  'hsl(38, 92%, 50%)',    // warning amber
+  'hsl(200, 90%, 50%)',   // cyan
+  'hsl(350, 80%, 55%)',   // rose
+];
+
+const AnalyticsPage = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState('7d');
+  const [activeTab, setActiveTab] = useState('overview');
+  const { addToast } = useToastStore();
+
+  const [analytics, setAnalytics] = useState({
+    overview: { totalCases: 12, activeCases: 8, totalDocuments: 45678, reviewedDocuments: 32456, totalUsers: 24, activeUsers: 18 },
+    reviewProgress: {
+      byCase: [
+        { name: 'Smith v. Jones', total: 12500, reviewed: 11200, percentage: 89.6 },
+        { name: 'ABC Corp Litigation', total: 8900, reviewed: 6500, percentage: 73.0 },
+        { name: 'Merger Review', total: 15600, reviewed: 8900, percentage: 57.1 },
+        { name: 'Patent Dispute', total: 8678, reviewed: 5856, percentage: 67.5 },
+      ],
+      dailyReviews: [450, 520, 480, 610, 590, 720, 680],
+      weeklyTrend: [3200, 3400, 3100, 3800, 3600, 4200, 3900],
+    },
+    userActivity: {
+      topReviewers: [
+        { name: 'John Doe', reviews: 1247, hours: 86.5, accuracy: 96.2 },
+        { name: 'Sarah Johnson', reviews: 1089, hours: 72.3, accuracy: 94.8 },
+        { name: 'Mike Wilson', reviews: 956, hours: 65.8, accuracy: 97.1 },
+        { name: 'Emily Davis', reviews: 823, hours: 58.2, accuracy: 95.5 },
+      ],
+    },
+    documentStats: {
+      byType: [
+        { type: 'PDF', count: 23456, percentage: 51.4 },
+        { type: 'Email', count: 12345, percentage: 27.0 },
+        { type: 'Word', count: 6789, percentage: 14.9 },
+        { type: 'Excel', count: 2345, percentage: 5.1 },
+        { type: 'Other', count: 743, percentage: 1.6 },
+      ],
+      byCustodian: [
+        { name: 'John Smith', count: 12500 },
+        { name: 'Sarah Johnson', count: 8900 },
+        { name: 'Michael Chen', count: 2100 },
+        { name: 'Emily Davis', count: 450 },
+        { name: 'Robert Wilson', count: 1800 },
+      ],
+      codingStats: {
+        relevance: { relevant: 18500, notRelevant: 13956 },
+        privilege: { privileged: 2345, notPrivileged: 30111 },
+        confidential: { yes: 8900, no: 23556 },
+      },
+    },
+    timeline: {
+      uploads: [1200, 1500, 1100, 1800, 1600, 2000, 1700],
+      reviews: [450, 520, 480, 610, 590, 720, 680],
+    },
+  });
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [timeRange]);
+
+  const fetchAnalytics = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get(`/analytics?range=${timeRange}`);
+      if (response.data) setAnalytics(response.data);
+    } catch (error) {
+      addToast({
+        title: 'Failed to load analytics',
+        message: 'Showing the latest cached dashboard values.',
+        type: 'error'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const escapeCsvCell = (value: unknown): string => {
+    if (value === null || value === undefined) {
+      return '""';
+    }
+
+    const normalized = String(value)
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .replace(/"/g, '""');
+    return `"${normalized}"`;
+  };
+
+  const exportReport = () => {
+    const generatedAt = new Date().toISOString();
+    const report = {
+      reportType: 'analytics-dashboard',
+      generatedAt,
+      timeRange,
+      summary: {
+        totalCases: analytics.overview.totalCases,
+        activeCases: analytics.overview.activeCases,
+        totalDocuments: analytics.overview.totalDocuments,
+        reviewedDocuments: analytics.overview.reviewedDocuments,
+        reviewRate:
+          analytics.overview.totalDocuments > 0
+            ? Number(((analytics.overview.reviewedDocuments / analytics.overview.totalDocuments) * 100).toFixed(2))
+            : 0,
+        totalUsers: analytics.overview.totalUsers,
+        activeUsers: analytics.overview.activeUsers
+      },
+      datasets: {
+        reviewByCase: analytics.reviewProgress.byCase,
+        dailyReviews: analytics.reviewProgress.dailyReviews,
+        weeklyTrend: analytics.reviewProgress.weeklyTrend,
+        topReviewers: analytics.userActivity.topReviewers,
+        documentTypes: analytics.documentStats.byType,
+        documentsByCustodian: analytics.documentStats.byCustodian,
+        codingStats: analytics.documentStats.codingStats,
+        timeline: analytics.timeline
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json;charset=utf-8;' });
+    const url = globalThis.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const stamp = generatedAt.replace(/[:.]/g, '-');
+    link.setAttribute('download', `analytics_report_${stamp}.json`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    globalThis.URL.revokeObjectURL(url);
+
+    const csvHeaders = ['Metric', 'Value'];
+    const csvRows: Array<Array<string | number>> = [
+      ['Generated At (UTC)', generatedAt],
+      ['Time Range', timeRange],
+      ['Total Cases', analytics.overview.totalCases],
+      ['Active Cases', analytics.overview.activeCases],
+      ['Total Documents', analytics.overview.totalDocuments],
+      ['Reviewed Documents', analytics.overview.reviewedDocuments],
+      ['Review Rate (%)',
+        analytics.overview.totalDocuments > 0
+          ? ((analytics.overview.reviewedDocuments / analytics.overview.totalDocuments) * 100).toFixed(2)
+          : '0.00'
+      ],
+      ['Total Users', analytics.overview.totalUsers],
+      ['Active Users', analytics.overview.activeUsers]
+    ];
+
+    const csvLines = [csvHeaders.map(escapeCsvCell).join(',')];
+    for (const row of csvRows) {
+      csvLines.push(row.map(escapeCsvCell).join(','));
+    }
+
+    const csvBlob = new Blob([`\uFEFF${csvLines.join('\r\n')}`], { type: 'text/csv;charset=utf-8;' });
+    const csvUrl = globalThis.URL.createObjectURL(csvBlob);
+    const csvLink = document.createElement('a');
+    csvLink.href = csvUrl;
+    csvLink.setAttribute('download', `analytics_summary_${stamp}.csv`);
+    document.body.appendChild(csvLink);
+    csvLink.click();
+    csvLink.remove();
+    globalThis.URL.revokeObjectURL(csvUrl);
+
+    addToast({
+      title: 'Analytics report exported',
+      message: 'JSON and CSV reports were downloaded.',
+      type: 'success'
+    });
+  };
+
+  // Transform data for Recharts
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const timelineData = days.map((day, i) => ({
+    day,
+    uploads: analytics.timeline.uploads[i],
+    reviews: analytics.timeline.reviews[i],
+  }));
+
+  const docTypeData = analytics.documentStats.byType.map(t => ({ name: t.type, value: t.count }));
+
+  const codingData = [
+    { name: 'Relevant', value: analytics.documentStats.codingStats.relevance.relevant, fill: CHART_COLORS[1] },
+    { name: 'Not Relevant', value: analytics.documentStats.codingStats.relevance.notRelevant, fill: CHART_COLORS[3] },
+  ];
+  const privilegeData = [
+    { name: 'Privileged', value: analytics.documentStats.codingStats.privilege.privileged, fill: CHART_COLORS[5] },
+    { name: 'Not Privileged', value: analytics.documentStats.codingStats.privilege.notPrivileged, fill: CHART_COLORS[0] },
+  ];
+
+  const weeklyData = analytics.reviewProgress.weeklyTrend.map((val, i) => ({ week: `W${i + 1}`, reviews: val }));
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Analytics Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Insights and metrics across all cases</p>
+        </div>
+        <div className="flex gap-2">
+          <SelectField value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
+            <option value="24h">Last 24 Hours</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="90d">Last 90 Days</option>
+          </SelectField>
+          <Button variant="outline" onClick={exportReport}>
+            <Download className="mr-2 h-4 w-4" /> Export
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <StatCard label="Total Cases" value={analytics.overview.totalCases} icon={FileText} variant="primary" />
+        <StatCard label="Active Cases" value={analytics.overview.activeCases} icon={Activity} variant="success" />
+        <StatCard label="Documents" value={analytics.overview.totalDocuments.toLocaleString()} icon={FileText} variant="purple" />
+        <StatCard label="Reviewed" value={`${Math.round((analytics.overview.reviewedDocuments / analytics.overview.totalDocuments) * 100)}%`} icon={CheckCircle} variant="warning" />
+        <StatCard label="Total Users" value={analytics.overview.totalUsers} icon={Users} variant="info" />
+        <StatCard label="Active Now" value={analytics.overview.activeUsers} icon={Clock} variant="destructive" />
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-muted p-1 border border-border">
+          <TabsTrigger value="overview" className="px-6 gap-2"><BarChart3 className="h-4 w-4" /> Overview</TabsTrigger>
+          <TabsTrigger value="review" className="px-6 gap-2"><CheckCircle className="h-4 w-4" /> Review</TabsTrigger>
+          <TabsTrigger value="users" className="px-6 gap-2"><Users className="h-4 w-4" /> Users</TabsTrigger>
+          <TabsTrigger value="documents" className="px-6 gap-2"><FileText className="h-4 w-4" /> Documents</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" /> Activity Timeline
+                </CardTitle>
+                <CardDescription>Daily uploads & reviews this week</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={timelineData}>
+                    <defs>
+                      <linearGradient id="uploadGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={CHART_COLORS[0]} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={CHART_COLORS[0]} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="reviewGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={CHART_COLORS[1]} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={CHART_COLORS[1]} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0.75rem', color: 'hsl(var(--foreground))' }}
+                    />
+                    <Area type="monotone" dataKey="uploads" stroke={CHART_COLORS[0]} fill="url(#uploadGrad)" strokeWidth={2} name="Uploads" />
+                    <Area type="monotone" dataKey="reviews" stroke={CHART_COLORS[1]} fill="url(#reviewGrad)" strokeWidth={2} name="Reviews" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <PieChartIcon className="h-5 w-5 text-primary" /> Document Types
+                </CardTitle>
+                <CardDescription>Distribution by file type</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie data={docTypeData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value">
+                      {docTypeData.map((_, idx) => (
+                        <Cell key={`cell-${idx}`} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0.75rem', color: 'hsl(var(--foreground))' }} />
+                    <Legend iconType="circle" formatter={(value) => <span className="text-foreground text-sm">{value}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="review" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2"><CheckCircle className="h-5 w-5 text-success" /> Review by Case</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {analytics.reviewProgress.byCase.map((c) => (
+                  <div key={c.name} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-foreground text-sm">{c.name}</span>
+                      <span className="text-xs text-muted-foreground">{c.reviewed.toLocaleString()} / {c.total.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className={cn("h-full rounded-full transition-all", c.percentage >= 80 ? "bg-success" : c.percentage >= 50 ? "bg-warning" : "bg-destructive")} style={{ width: `${c.percentage}%` }} />
+                      </div>
+                      <span className="text-sm font-bold w-12 text-right text-foreground">{c.percentage.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" /> Weekly Trend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={weeklyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0.75rem', color: 'hsl(var(--foreground))' }} />
+                    <Bar dataKey="reviews" fill={CHART_COLORS[0]} radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-muted rounded-xl"><p className="text-xs text-muted-foreground uppercase">Avg Daily</p><p className="text-xl font-bold text-foreground">{Math.round(analytics.reviewProgress.dailyReviews.reduce((a, b) => a + b, 0) / 7).toLocaleString()}</p></div>
+                  <div className="p-3 bg-muted rounded-xl"><p className="text-xs text-muted-foreground uppercase">Peak Day</p><p className="text-xl font-bold text-foreground">{Math.max(...analytics.reviewProgress.dailyReviews).toLocaleString()}</p></div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Coding Statistics</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-4 text-center">Relevance</h4>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart><Pie data={codingData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4} dataKey="value">
+                      {codingData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                    </Pie><Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0.75rem', color: 'hsl(var(--foreground))' }} /><Legend iconType="circle" /></PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-4 text-center">Privilege</h4>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart><Pie data={privilegeData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4} dataKey="value">
+                      {privilegeData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                    </Pie><Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0.75rem', color: 'hsl(var(--foreground))' }} /><Legend iconType="circle" /></PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-6">
+          <Card>
+            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Top Reviewers</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {analytics.userActivity.topReviewers.map((reviewer, index) => (
+                  <div key={reviewer.name} className="flex items-center gap-4 p-3 bg-muted rounded-xl">
+                    <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold">{index + 1}</div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-foreground">{reviewer.name}</p>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground"><span>{reviewer.reviews.toLocaleString()} reviews</span><span>{reviewer.hours} hours</span></div>
+                    </div>
+                    <div className="text-right"><p className="text-lg font-bold text-success">{reviewer.accuracy}%</p><p className="text-xs text-muted-foreground">accuracy</p></div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="documents" className="space-y-6">
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Documents by Custodian</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analytics.documentStats.byCustodian} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} width={120} />
+                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0.75rem', color: 'hsl(var(--foreground))' }} />
+                  <Bar dataKey="count" fill={CHART_COLORS[4]} radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default AnalyticsPage;

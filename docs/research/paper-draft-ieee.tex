@@ -1,0 +1,199 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{cite}
+\usepackage{url}
+
+\title{Auditable Role-Driven eDiscovery Platform: A Full-Stack Systems Design and API-Centric Study}
+
+\author{\IEEEauthorblockN{Anonymous for Review}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This paper presents a comprehensive systems-level study of a legal eDiscovery platform designed to operationalize litigation document workflows from ingestion to court-ready production. The platform is implemented as a MERN-based architecture with a TypeScript-first codebase and formalized API boundaries. The study focuses on architecture, authorization design, workflow control semantics, and deployment reproducibility using project canonical documentation as primary evidence. We analyze the end-to-end lifecycle, including case and team management, custodian workflows, bulk document upload with deduplication, review queue coding, production state transitions, analytics endpoints, and audit traceability. Particular emphasis is placed on policy-critical controls such as dual-layer role handling, privilege-based production exclusion, immutable Bates-number semantics, and append-only audit event capture. We also report implementation-oriented strengths and practical limitations relevant to engineering publication standards, including API consistency considerations, environment prerequisites, and reproducibility guardrails. The resulting manuscript positions the platform as a systems and workflow-governance contribution rather than a machine-learning contribution, and provides a publication-ready baseline for future empirical and model-augmented extensions.
+\end{abstract}
+
+\begin{IEEEkeywords}
+eDiscovery, legal workflow systems, role-based access control, audit trail, production state machine, document deduplication, MERN architecture, API engineering
+\end{IEEEkeywords}
+
+\section{Introduction}
+Digital litigation workflows require coordinated handling of large document corpora under strict legal, procedural, and security constraints. Modern eDiscovery systems must support collection, tagging, review, privilege classification, production-set curation, and defensible auditability while maintaining practical engineering throughput. In this context, architectural integrity and policy enforcement are as important as user-facing features.
+
+The studied platform targets this operational space using a web-first architecture and explicit REST APIs \cite{arch,api}. The design objective is not algorithmic novelty but reliable workflow orchestration under role constraints and evidentiary accountability. The documentation corpus specifies a complete lifecycle from upload to production and exposes the internal policy model through API contracts and role matrices \cite{arch,api,roles,setup}.
+
+This paper provides a comprehensive review of the project documentation and reformulates the project as a systems paper. The key goals are:
+\begin{enumerate}
+\item To formalize the architecture and control model.
+\item To map role and state semantics to concrete workflow outcomes.
+\item To assess reproducibility posture from setup and API documentation.
+\item To identify system-level strengths and publication-relevant limitations.
+\end{enumerate}
+
+\section{System Context and Design Targets}
+\subsection{Application Domain Scope}
+The platform addresses legal eDiscovery operations across the following stages \cite{arch,api}:
+\begin{enumerate}
+\item User authentication and role-governed access.
+\item Case creation and team assignment.
+\item Custodian registration and document attribution.
+\item Document ingestion, extraction, and deduplication.
+\item Privilege and relevance coding through a review queue.
+\item Production set preparation, approval, and export.
+\item Activity analytics, notifications, and audit visibility.
+\end{enumerate}
+
+\subsection{Engineering Goals}
+The documentation indicates four dominant design targets \cite{arch,roles,setup}:
+\begin{enumerate}
+\item End-to-end workflow coverage in a single platform.
+\item Role-safe operation through firm-level and case-scoped policies.
+\item Chain-of-custody support via audit records and Bates integrity.
+\item Reproducible local and cloud deployment with explicit environment configuration.
+\end{enumerate}
+
+\subsection{Non-Goals in Current Scope}
+Based on the provided documentation, the current platform is not framed as:
+\begin{enumerate}
+\item A semantic retrieval or ranking research system.
+\item A large-scale distributed architecture benchmark.
+\item A formal legal-compliance certification artifact.
+\end{enumerate}
+
+\section{Overall Architecture}
+\subsection{Multi-Tier Stack Composition}
+The documented architecture is a three-tier web system \cite{arch}:
+\begin{enumerate}
+\item Client tier: React 19, Vite, TypeScript, Zustand, TanStack Query, Axios, and Tailwind CSS.
+\item API tier: Express 5 on Node.js 20 with TypeScript strict mode.
+\item Persistence tier: MongoDB via Mongoose plus local filesystem storage for uploaded binaries.
+\end{enumerate}
+
+Communication is REST over HTTPS with JSON payloads for business objects and multipart form data for uploads \cite{arch,api}.
+
+\subsection{Route Topology and Modularization}
+API routes are mounted under \texttt{/api} and split by domain modules \cite{arch,api}:
+\begin{enumerate}
+\item Authentication (\texttt{/auth}).
+\item Cases (\texttt{/cases}).
+\item Documents and search/export (\texttt{/documents/*}, \texttt{/saved-searches/*}).
+\item Review (\texttt{/cases/:caseId/review/queue}, \texttt{/documents/:id/code}).
+\item Productions (\texttt{/cases/:caseId/productions}, \texttt{/productions/*}).
+\item Analytics (\texttt{/analytics}, \texttt{/cases/:caseId/analytics*}).
+\item Dashboard, notifications, users, and audit logs.
+\end{enumerate}
+
+This route decomposition supports feature isolation and explicit permission gating at endpoint boundaries.
+
+\subsection{Data Model and Persistence Surface}
+The architecture defines nine primary collections \cite{arch}: \texttt{users}, \texttt{cases}, \texttt{custodians}, \texttt{documents}, \texttt{issuetags}, \texttt{productionsets}, \texttt{auditlogs}, \texttt{notifications}, and \texttt{savedsearches}.
+
+Document records include review-oriented fields (e.g., \texttt{privilegeStatus}, \texttt{relevanceStatus}, \texttt{reviewedBy}, \texttt{reviewedAt}) and ingestion-lineage fields (e.g., \texttt{md5Hash}, \texttt{isDuplicate}, \texttt{masterDocId}) \cite{arch,api}.
+
+\section{Access Control and Workflow Governance Model}
+\subsection{Dual-Layer Role Semantics}
+The role model is split into firm-level roles (\texttt{ADMIN}, \texttt{PARTNER}, \texttt{ASSOCIATE}, \texttt{PARALEGAL}) and case-scoped roles (\texttt{LEAD}, \texttt{REVIEWER}, \texttt{PARALEGAL}) \cite{roles}. The documented intent is that protected operations satisfy authentication and role constraints, with Admin and Partner escalation behavior for broad case visibility \cite{roles}.
+
+\subsection{Permission Matrix Characteristics}
+The permission matrix in \cite{roles} indicates:
+\begin{enumerate}
+\item Administrative control is centralized in \texttt{ADMIN} for user lifecycle and archival actions.
+\item \texttt{LEAD} mediates case-level governance (team updates, case metadata, tags).
+\item Review coding is available to review-authorized roles.
+\item Production approval and final production marking require \texttt{PARTNER} or \texttt{ADMIN}.
+\end{enumerate}
+
+\subsection{Production State Machine Integrity}
+Production lifecycle states are documented as \texttt{DRAFT -> IN\_REVIEW -> APPROVED -> PRODUCED} \cite{roles}. Critical semantics include DRAFT-scoped add/remove operations, elevated approval authority, post-finalization mutation blocking, and non-resequenced Bates identifiers.
+
+\section{API-Centric Workflow Realization}
+\subsection{Authentication and Session Continuity}
+Auth endpoints include register (admin-authenticated), login, refresh, profile retrieval, and password-reset flow \cite{api}. Access token and refresh token behavior is documented with 1-day and 7-day windows, respectively \cite{arch,api}.
+
+\subsection{Case and Team Operations}
+Case APIs support creation, listing with pagination and filtering, metadata updates, soft archival, and team-member management \cite{api}. Team composition and role assignment operate as structural preconditions for case-scoped workflows \cite{api,roles}.
+
+\subsection{Custodian and Document Ingestion}
+Custodian endpoints manage person-level data ownership context for documents \cite{api}. Upload API accepts multipart file arrays (\texttt{files}) and custodian assignment, with allowed file types and per-file limits documented in both API and setup references \cite{api,setup}.
+
+Deduplication is exposed via check-duplicate endpoints (\texttt{GET} query form and compatibility \texttt{POST} body form), enabling pre-ingest duplication checks in client workflows \cite{api}.
+
+\subsection{Search, Saved Searches, and Export}
+The search subsystem supports multi-criteria filtering over custodians, dates, privilege and relevance status sets, tags, notes presence, duplicate inclusion, and filename query patterns \cite{api}. Saved searches are user-scoped per case and export endpoints produce CSV outputs for downstream review operations \cite{api}.
+
+\subsection{Review Queue and Coding}
+Review endpoints implement queue retrieval and coding submission with immediate next-document response optimization \cite{api}. Coding-history retrieval from audit records supports temporal reconstruction of decision activity \cite{api,roles}.
+
+\subsection{Production and Export}
+Production APIs support set creation, document population, status transitions, approval, production marking, and metadata export \cite{api}. Privilege statuses other than \texttt{NOT\_PRIVILEGED} are documented as exclusion criteria for production inclusion \cite{roles}.
+
+\subsection{Analytics, Dashboard, Notifications, and Users}
+The API reference includes platform-level analytics (\texttt{/analytics}), case-level analytics (\texttt{/cases/:caseId/analytics*}), dashboard aggregates (\texttt{/dashboard/*}), notifications lifecycle operations, and admin-focused user management endpoints \cite{api}.
+
+\section{Security and Traceability Analysis}
+\subsection{Security Controls}
+The documented security profile includes JWT-based authentication with access/refresh separation, environment-secret startup checks, bcrypt password hashing, cryptographically strong password-reset tokens, CORS origin scoping, and upload type/extension constraints \cite{arch,setup}.
+
+\subsection{Auditability and Chain-of-Custody Signals}
+Audit log records are documented to capture action type, actor, entity, details, source IP, and timestamp \cite{arch,roles}. In workflow terms, this enables decision-path reconstruction for coding events, access-event visibility for sensitive document interactions, and production action tracking for legal defensibility.
+
+\subsection{Governance-Critical Data Semantics}
+The most legally significant enumerations are privilege and relevance statuses \cite{roles}. These categorical controls are consumed across review, search, analytics, and production pipelines, forming a consistent policy vocabulary.
+
+\section{Deployment, Operations, and Reproducibility}
+\subsection{Environment Prerequisites}
+Setup requirements include Node.js 20, npm 10, MongoDB 7, and standard two-process development operation (server/client) \cite{setup}. Production build paths and output directories are explicitly documented \cite{setup}.
+
+\subsection{Configuration Determinism}
+Required environment variables and defaults are clearly listed for backend and frontend, including JWT secrets and API base URL wiring \cite{setup}. This improves replicability for local and hosted setups.
+
+\subsection{Operational Boundaries}
+The setup guide highlights upload storage location, file limits, and common configuration failures (CORS mismatch, Mongo connectivity, env omissions) \cite{setup}. This provides actionable troubleshooting detail and strengthens engineering reproducibility.
+
+\section{Discussion}
+\subsection{Strengths for Systems Publication}
+From the documentation corpus, the platform is publication-relevant in systems and practice venues for four reasons:
+\begin{enumerate}
+\item End-to-end lifecycle coverage is clearly specified.
+\item Access and state controls are explicit and role-linked.
+\item API contracts are broad, organized, and domain-aligned.
+\item Deployment procedures are sufficiently detailed for reproduction.
+\end{enumerate}
+
+\subsection{Identified Limitations}
+A strict systems-paper framing should acknowledge:
+\begin{enumerate}
+\item Absence of documented algorithmic IR/ML novelty.
+\item Lack of benchmark-scale performance data in current docs.
+\item Limited formal validation discussion (e.g., statistical evaluation protocol) in canonical docs.
+\item Local filesystem default for uploads, with object storage as a recommended future adaptation \cite{setup}.
+\end{enumerate}
+
+\subsection{Publication Positioning Recommendation}
+Given the documented maturity profile, the strongest first submission path is an engineering/systems paper emphasizing workflow integrity, API governance, and operational reproducibility rather than model-performance claims.
+
+\section{Conclusion}
+This paper reformulates a documented legal eDiscovery platform into a systems contribution centered on architecture, control semantics, and API-governed workflow realization. The reviewed documentation demonstrates a coherent full-stack design with explicit role modeling, production-state safety constraints, audit-aware process tracking, and reproducible deployment guidance.
+
+The main contribution is practical: a defensibility-oriented implementation blueprint for legal review operations where policy integrity and traceability are first-class system requirements. Future work can extend this baseline with rigorous empirical benchmarking, multi-tenant hardening, and ML-assisted prioritization, but the current platform is suitable for systems-engineering dissemination when presented with scope-accurate claims.
+
+\begin{thebibliography}{1}
+
+\bibitem{arch}
+eDiscovery Platform Team, ``System Architecture,'' Project Documentation, \texttt{docs/ARCHITECTURE.md}, 2026.
+
+\bibitem{api}
+eDiscovery Platform Team, ``REST API Reference,'' Project Documentation, \texttt{docs/API.md}, 2026.
+
+\bibitem{roles}
+eDiscovery Platform Team, ``Role-Based Access Control Reference,'' Project Documentation, \texttt{docs/ROLES.md}, 2026.
+
+\bibitem{setup}
+eDiscovery Platform Team, ``Developer Setup Guide,'' Project Documentation, \texttt{docs/SETUP.md}, 2026.
+
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,26 @@
+﻿
+> verify5.log:98:--- 
+Testing Save Search ---
+  verify5.log:99:Save 
+Search failed: {
+  verify5.log:100:  
+success: false,
+  verify5.log:101:  
+message: 'Not Found - /a
+  verify5.log:102:pi/cases
+/697bb96234a49ea3b
+  verify5.log:103:61fd9af/
+saved-searches',
+  verify5.log:104:  
+error: 'Error: Not 
+  verify5.log:105:Found - 
+/api/cases/697bb96
+  verify5.log:106:234a49ea
+3b61fd9af/saved-se
+  
+verify5.log:107:arches\n' 
++
+  verify5.log:108:    '   
+ at 
+
+

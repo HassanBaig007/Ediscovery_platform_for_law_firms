@@ -1,0 +1,35 @@
+﻿
+> verify_results.log:291:E
+xport failed: {
+  verify_results.log:292: 
+ success: false,
+  verify_results.log:293: 
+ message: 'Not 
+  verify_results.log:294:F
+ound - /api/document
+  verify_results.log:295:s
+/export',
+  verify_results.log:296: 
+ error: 'Error: Not 
+  verify_results.log:297:F
+ound - /api/document
+  verify_results.log:298:s
+/export\n' +
+  verify_results.log:299: 
+   '    at 
+  verify_results.log:300:n
+otFoundHandler (C:\\
+  verify_results.log:301:U
+sers\\Hassa\\Desktop
+  verify_results.log:302:\
+\MAJOR_PROJECT_4THSE
+  verify_results.log:303:M
+\\ediscovery-platfor
+  verify_results.log:304:m
+\\server\\src\\middl
+  verify_results.log:305:e
+ware\\errorMiddlewar
+  verify_results.log:306:e
+.ts:24:19)\n' +
+
+

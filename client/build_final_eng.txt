@@ -1,0 +1,4 @@
+src/components/review/CodingPanel.tsx(17,51): error TS6133: 'setValue' is declared but its value is never read.
+src/context/ReviewContext.tsx(2,17): error TS2307: Cannot find module '../utils/api' or its corresponding type declarations.
+src/context/ReviewContext.tsx(75,50): error TS6133: 'skipIds' is declared but its value is never read.
+src/pages/CaseDetail.tsx(248,54): error TS2339: Property 'id' does not exist on type 'ITeamMember'.

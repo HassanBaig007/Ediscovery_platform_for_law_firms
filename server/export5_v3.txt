@@ -1,0 +1,25 @@
+﻿
+> verify5.log:249:--- 
+Testing Export Documents 
+---
+  verify5.log:250:Export 
+failed: {
+  verify5.log:251:  
+success: false,
+  verify5.log:252:  
+message: 'Not Found - 
+  verify5.log:253:/api/doc
+uments/export',
+  verify5.log:254:  
+error: 'Error: Not 
+  verify5.log:255:Found - 
+  verify5.log:256:/api/doc
+uments/export\n' +
+  verify5.log:257:    '   
+ at 
+  verify5.log:258:notFound
+Handler (C:\\Users
+  verify5.log:259:\\Hassa\
+\Desktop\\MAJOR_PR
+
+
