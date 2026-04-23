@@ -21,11 +21,10 @@ import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
 import { useToastStore } from '../store/toastStore';
 import {
-  formatAuditActionLabel,
-  formatAuditActionPastTenseLabel,
-  formatEntityTypeLabel,
+  formatAuditAction,
+  formatEntityName,
   getAuditActionClassName
-} from '../lib/content';
+} from '../utils/formatters';
 
 interface AuditLog {
   id: string;
@@ -122,8 +121,8 @@ const AuditLogsPage = () => {
         new Date(log.createdAt).toISOString(),
         log.userName,
         log.userEmail,
-        formatAuditActionLabel(log.action),
-        formatEntityTypeLabel(log.entityType),
+        formatAuditAction(log.action),
+        formatEntityName(log.entityType),
         log.entityId || '',
         log.entityName || '',
         log.ipAddress || ''
@@ -301,7 +300,7 @@ const AuditLogsPage = () => {
               >
                 <option value="ALL">All Actions</option>
                 {uniqueActions.map(action => (
-                  <option key={action} value={action}>{formatAuditActionLabel(action)}</option>
+                  <option key={action} value={action}>{formatAuditAction(action)}</option>
                 ))}
               </select>
               <label htmlFor="entity-filter" className="sr-only">Filter by entity</label>
@@ -314,7 +313,7 @@ const AuditLogsPage = () => {
               >
                 <option value="ALL">All Entities</option>
                 {uniqueEntities.map(entity => (
-                  <option key={entity} value={entity}>{formatEntityTypeLabel(entity)}</option>
+                  <option key={entity} value={entity}>{formatEntityName(entity)}</option>
                 ))}
               </select>
               <label htmlFor="date-from" className="sr-only">From date</label>
@@ -382,8 +381,8 @@ const AuditLogsPage = () => {
                           <div>
                             <p className="font-medium text-foreground">
                               <span className="font-semibold">{log.userName}</span>
-                              {' '}<span className="text-muted-foreground">{formatAuditActionPastTenseLabel(log.action).toLowerCase()}</span>{' '}
-                              <span className="font-semibold">{formatEntityTypeLabel(log.entityType)}</span>
+                              {' '}<span className="text-muted-foreground">{formatAuditAction(log.action).toLowerCase()}</span>{' '}
+                              <span className="font-semibold">{formatEntityName(log.entityType)}</span>
                               {log.entityName && (
                                 <span className="text-muted-foreground">: {log.entityName}</span>
                               )}
@@ -404,7 +403,7 @@ const AuditLogsPage = () => {
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <Badge variant="outline" className={cn('text-xs', getAuditActionClassName(log.action))}>
-                              {formatAuditActionLabel(log.action)}
+                              {formatAuditAction(log.action)}
                             </Badge>
                             <span className="text-xs text-muted-foreground whitespace-nowrap">
                               {getTimeAgo(log.createdAt)}
@@ -441,7 +440,7 @@ const AuditLogsPage = () => {
                   <span className="text-muted-foreground">Action</span>
                   <p className="font-semibold">
                     <Badge variant="outline" className={getAuditActionClassName(selectedLog.action)}>
-                      {formatAuditActionLabel(selectedLog.action)}
+                      {formatAuditAction(selectedLog.action)}
                     </Badge>
                   </p>
                 </div>
@@ -452,7 +451,7 @@ const AuditLogsPage = () => {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Entity</span>
-                  <p className="font-semibold">{formatEntityTypeLabel(selectedLog.entityType)}</p>
+                  <p className="font-semibold">{formatEntityName(selectedLog.entityType)}</p>
                   {selectedLog.entityName && (
                     <p className="text-xs text-muted-foreground">{selectedLog.entityName}</p>
                   )}

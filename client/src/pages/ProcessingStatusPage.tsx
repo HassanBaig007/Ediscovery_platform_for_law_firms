@@ -7,7 +7,8 @@ import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
 import { analyticsService, CaseAnalytics } from '../services/analytics.service';
 import { ErrorState } from '../components/ui/ErrorState';
-import { CONTENT_TONE, WORKFLOW_STAGE_TERMS } from '../lib/content';
+import { CONTENT_TONE } from '../utils/formatters';
+import { INGESTION_STAGES } from '../../../shared/constants';
 
 const ProcessingStatusPage = () => {
   const { id: caseId } = useParams<{ id: string }>();
@@ -66,7 +67,7 @@ const ProcessingStatusPage = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /> Processing Status</CardTitle>
             <CardDescription>
-              Status details below describe document readiness from {WORKFLOW_STAGE_TERMS.upload.term.toLowerCase()} through {WORKFLOW_STAGE_TERMS.ingest.term.toLowerCase()}.
+              Status details below describe document readiness from {INGESTION_STAGES.UPLOAD.toLowerCase()} through {INGESTION_STAGES.INGEST.toLowerCase()}.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -16,7 +16,7 @@ import { Skeleton } from '../components/ui/Skeleton';
 import api from '../services/api';
 import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
-import { formatCaseRoleLabel } from '../lib/content';
+import { formatCaseRole as formatCaseRoleLabel } from '../utils/formatters';
 
 interface CaseAnalytics {
     totalDocuments: number;

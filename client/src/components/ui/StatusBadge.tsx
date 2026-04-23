@@ -1,43 +1,66 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
-import { toTitleCaseLabel } from '../../lib/content'
-
-type StatusType =
-  | "active" | "closed" | "archived" | "draft"
-  | "in_review" | "approved" | "produced"
-  | "pending" | "uploading" | "completed" | "error" | "duplicate"
-  | "online" | "offline"
+import { formatCaseStatus, formatPrivilegeStatus, formatRelevanceStatus, formatProductionStatus } from "../../utils/formatters"
+import { CaseStatus, PrivilegeStatus, RelevanceStatus, ProductionSetStatus } from "../../../../shared/types"
 
 interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   status: string
+  type?: "case" | "privilege" | "relevance" | "production" | "default"
   size?: "sm" | "md"
 }
 
-const statusConfig: Record<StatusType, { label: string; classes: string; dot: string }> = {
-  active:    { label: "Active",    classes: "bg-primary/10 text-primary border-primary/20",              dot: "bg-primary" },
-  closed:    { label: "Closed",    classes: "bg-success/10 text-success border-success/20",              dot: "bg-success" },
-  archived:  { label: "Archived",  classes: "bg-warning/10 text-warning border-warning/20",              dot: "bg-warning" },
-  draft:     { label: "Draft",     classes: "bg-muted text-muted-foreground border-border",              dot: "bg-muted-foreground" },
-  in_review: { label: "In Review", classes: "bg-warning/10 text-warning border-warning/20",              dot: "bg-warning" },
-  approved:  { label: "Approved",  classes: "bg-primary/10 text-primary border-primary/20",              dot: "bg-primary" },
-  produced:  { label: "Produced",  classes: "bg-success/10 text-success border-success/20",              dot: "bg-success" },
-  pending:   { label: "Pending",   classes: "bg-muted text-muted-foreground border-border",              dot: "bg-muted-foreground" },
-  uploading: { label: "Uploading", classes: "bg-primary/10 text-primary border-primary/20",              dot: "bg-primary animate-pulse" },
-  completed: { label: "Completed", classes: "bg-success/10 text-success border-success/20",              dot: "bg-success" },
-  error:     { label: "Error",     classes: "bg-destructive/10 text-destructive border-destructive/20",  dot: "bg-destructive" },
-  duplicate: { label: "Duplicate", classes: "bg-warning/10 text-warning border-warning/20",              dot: "bg-warning" },
-  online:    { label: "Online",    classes: "bg-success/10 text-success border-success/20",              dot: "bg-success animate-pulse" },
-  offline:   { label: "Offline",   classes: "bg-muted text-muted-foreground border-border",              dot: "bg-muted-foreground" },
+const getStatusConfig = (status: string, type: "case" | "privilege" | "relevance" | "production" | "default" = "default") => {
+    let label = status;
+    const normalizedStatus = status.toUpperCase().replace(/ /g, "_");
+
+    switch(type) {
+        case "case":
+            label = formatCaseStatus(normalizedStatus as CaseStatus);
+            break;
+        case "privilege":
+            label = formatPrivilegeStatus(normalizedStatus as PrivilegeStatus);
+            break;
+        case "relevance":
+            label = formatRelevanceStatus(normalizedStatus as RelevanceStatus);
+            break;
+        case "production":
+            label = formatProductionStatus(normalizedStatus as ProductionSetStatus);
+            break;
+        default:
+            const statusKey = status.toLowerCase().replace(/_/g, " ");
+            label = statusKey.charAt(0).toUpperCase() + statusKey.slice(1);
+    }
+
+    const key = normalizedStatus.toLowerCase();
+    
+    // Determine styles based on key words in the status
+    let classes = "bg-muted text-muted-foreground border-border";
+    let dot = "bg-muted-foreground";
+
+    if (["active", "approved", "completed", "success", "produced", "online"].includes(key)) {
+        classes = "bg-success/10 text-success border-success/20";
+        dot = "bg-success";
+    } else if (["closed", "archived", "error", "failed", "rejected", "offline", "destructive"].includes(key)) {
+        classes = "bg-destructive/10 text-destructive border-destructive/20";
+        dot = "bg-destructive";
+    } else if (["in_review", "pending", "draft", "warning", "needs_review"].includes(key)) {
+        classes = "bg-warning/10 text-warning border-warning/20";
+        dot = "bg-warning";
+    } else if (["uploading", "processing", "primary", "highly_relevant", "attorney_client", "work_product", "relevant"].includes(key)) {
+        classes = "bg-primary/10 text-primary border-primary/20";
+        dot = "bg-primary";
+    }
+
+    if (["uploading", "processing", "online"].includes(key)) {
+        dot += " animate-pulse";
+    }
+
+    return { label, classes, dot };
 }
 
 const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
-  ({ status, size = "sm", className, ...props }, ref) => {
-    const key = status.toLowerCase().replace(/ /g, "_") as StatusType
-    const config = statusConfig[key] || {
-      label: toTitleCaseLabel(status),
-      classes: "bg-muted text-muted-foreground border-border",
-      dot: "bg-muted-foreground",
-    }
+  ({ status, type = "default", size = "sm", className, ...props }, ref) => {
+    const config = getStatusConfig(status, type);
 
     return (
       <span

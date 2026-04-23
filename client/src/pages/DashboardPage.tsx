@@ -13,11 +13,11 @@ import { useAuthStore } from '../store/authStore';
 import { useRole } from '../hooks/useRole';
 import { dashboardService, DashboardStats, ActivityItem, CaseOverview } from '../services/dashboard.service';
 import {
-    formatRoleLabel,
+    formatUserRole as formatRoleLabel,
     ROLE_BADGE_CLASSNAMES,
-    ROLE_DASHBOARD_SUMMARIES,
-    WORKFLOW_STAGE_TERMS
-} from '../lib/content';
+    ROLE_DASHBOARD_SUMMARIES
+} from '../utils/formatters';
+import { INGESTION_STAGES } from '../../../shared/constants';
 
 const StatCard = ({
     icon: Icon,
@@ -168,7 +168,7 @@ const DashboardPage = () => {
         {
             icon: Upload,
             title: 'Upload Documents',
-            description: `Upload files to start ${WORKFLOW_STAGE_TERMS.process.term.toLowerCase()} and ${WORKFLOW_STAGE_TERMS.ingest.term.toLowerCase()}.`,
+            description: `Upload files to start ${INGESTION_STAGES.PROCESS.toLowerCase()} and ${INGESTION_STAGES.INGEST.toLowerCase()}.`,
             label: 'Upload',
             onClick: () => navigate('/cases'),
             color: 'success',

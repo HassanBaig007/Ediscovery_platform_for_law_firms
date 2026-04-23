@@ -125,7 +125,7 @@ export const uploadDocuments = async (req: AuthRequest, res: Response): Promise<
             }
             
             // Log Action
-            await logAction(uploadedBy, 'DOCUMENT_UPLOAD', 'Document', newDoc._id, { 
+            await logAction(uploadedBy, 'UPLOAD', 'document', newDoc._id, { 
                 filename: newDoc.filename, 
                 isDuplicate: newDoc.isDuplicate 
             }, req.ip);
@@ -232,7 +232,7 @@ export const downloadDocument = async (req: AuthRequest, res: Response): Promise
         // const hasAccess = ...
 
         // Log download
-        await logAction(req.user!._id, 'DOCUMENT_DOWNLOAD', 'Document', document._id, null, req.ip);
+        await logAction(req.user!._id, 'DOWNLOAD', 'document', document._id, null, req.ip);
 
         // Stream file
         const fileStream = getFileStream(document.filePath);
@@ -268,7 +268,7 @@ export const previewDocument = async (req: AuthRequest, res: Response): Promise<
             return;
         }
 
-        await logAction(req.user!._id, 'DOCUMENT_VIEW', 'Document', document._id, { preview: true }, req.ip);
+        await logAction(req.user!._id, 'VIEW', 'document', document._id, { preview: true }, req.ip);
 
         const fileStream = getFileStream(document.filePath);
 
@@ -303,7 +303,7 @@ export const getDocumentById = async (req: AuthRequest, res: Response): Promise<
             return;
         }
         
-        await logAction(req.user!._id, 'DOCUMENT_VIEW', 'Document', document._id, null, req.ip);
+        await logAction(req.user!._id, 'VIEW', 'document', document._id, null, req.ip);
 
         res.json(document);
     } catch (error: any) {
@@ -337,8 +337,8 @@ export const deleteDocumentById = async (req: AuthRequest, res: Response): Promi
 
         await logAction(
             req.user!._id,
-            'DOCUMENT_DELETE',
-            'Document',
+            'DELETE',
+            'document',
             document._id,
             {
                 filename: document.filename,
@@ -402,7 +402,7 @@ export const getDocumentCodingHistory = async (req: AuthRequest, res: Response):
         const logs = await AuditLog.find({
             entityType: 'Document',
             entityId: id,
-            action: { $in: ['DOCUMENT_REVIEWED', 'DOCUMENT_CODED', 'DOCUMENT_UPLOAD', 'DOCUMENT_TAGGED'] }
+            action: { $in: ['UPDATE', 'UPLOAD', 'CODE'] }
         })
         .populate('userId', 'firstName lastName')
         .sort({ createdAt: -1 });

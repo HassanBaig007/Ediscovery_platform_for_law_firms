@@ -1,7 +1,7 @@
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from './Button';
 import { Card, CardContent } from './Card';
-import { CONTENT_TONE } from '../../lib/content';
+import { CONTENT_TONE } from '../../utils/formatters';
 
 interface ErrorStateProps {
   title?: string;

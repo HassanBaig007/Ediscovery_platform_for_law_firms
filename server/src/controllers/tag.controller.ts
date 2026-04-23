@@ -41,7 +41,7 @@ export const createTag = async (req: AuthRequest, res: Response): Promise<void> 
 
         // Audit
         // Use Type Assertion if user type is slightly mismatch in TS vs Mongoose
-        await logAction(req.user!, 'TAG_CREATED', 'IssueTag', tag._id.toString(), { tagName });
+        await logAction(req.user!, 'CREATE', 'tag', tag._id.toString(), { tagName });
 
         res.status(201).json(tag);
     } catch (error: any) {

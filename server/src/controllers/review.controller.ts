@@ -78,7 +78,7 @@ export const getReviewQueue = async (req: AuthRequest, res: Response): Promise<v
         }
 
         // Log View
-        await logAction(req.user!._id, 'DOCUMENT_VIEW', 'Document', document._id, null, req.ip);
+        await logAction(req.user!._id, 'VIEW', 'document', document._id, null, req.ip);
 
         res.json(document);
     } catch (error: any) {
@@ -138,7 +138,7 @@ export const submitCoding = async (req: AuthRequest, res: Response): Promise<voi
 
         await document.save();
         
-        await logAction(req.user!._id, 'DOCUMENT_CODED', 'Document', document._id, { coding: codingData }, req.ip);
+        await logAction(req.user!._id, 'UPDATE', 'document', document._id, { coding: codingData }, req.ip);
 
         // Notify case leads about completed review (fire-and-forget)
         try {
@@ -177,7 +177,7 @@ export const submitCoding = async (req: AuthRequest, res: Response): Promise<voi
             .populate('custodianId');
 
         if (nextDoc) {
-            await logAction(req.user!._id, 'DOCUMENT_VIEW', 'Document', nextDoc._id, null, req.ip);
+            await logAction(req.user!._id, 'VIEW', 'document', nextDoc._id, null, req.ip);
         }
 
         res.json({

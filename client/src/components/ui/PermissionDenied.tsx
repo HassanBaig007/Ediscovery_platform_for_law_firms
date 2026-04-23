@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Button } from './Button';
-import { getPermissionDeniedMessage } from '../../lib/content';
+import { getPermissionDeniedMessage } from '../../utils/formatters';
 
 interface PermissionDeniedProps {
   requiredRole?: string;

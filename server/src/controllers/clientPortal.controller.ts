@@ -26,7 +26,7 @@ export const createCaseShare = async (req: AuthRequest, res: Response): Promise<
             status: 'SENT'
         });
 
-        await logAction(req.user!._id, 'CLIENT_PORTAL_SHARED', 'ClientPortalShare', share._id, {
+        await logAction(req.user!._id, 'CREATE', 'ClientPortalShare', share._id, {
             caseId,
             recipientEmail
         }, req.ip);
@@ -59,7 +59,7 @@ export const revokeCaseShare = async (req: AuthRequest, res: Response): Promise<
         share.status = 'REVOKED';
         await share.save();
 
-        await logAction(req.user!._id, 'CLIENT_PORTAL_REVOKED', 'ClientPortalShare', share._id, {
+        await logAction(req.user!._id, 'DELETE', 'ClientPortalShare', share._id, {
             caseId: share.caseId,
             recipientEmail: share.recipientEmail
         }, req.ip);

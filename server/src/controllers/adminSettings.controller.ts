@@ -41,7 +41,7 @@ export const updateSystemSettings = async (req: AuthRequest, res: Response): Pro
             { upsert: true, new: true }
         );
 
-        await logAction(req.user!._id, 'SYSTEM_SETTINGS_UPDATED', 'SystemSetting', settings!._id, payload, req.ip);
+        await logAction(req.user!._id, 'UPDATE', 'SystemSetting', settings!._id, payload, req.ip);
         res.json(settings);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
@@ -68,7 +68,7 @@ export const createIntegration = async (req: AuthRequest, res: Response): Promis
             status: 'DISCONNECTED'
         });
 
-        await logAction(req.user!._id, 'INTEGRATION_CREATED', 'Integration', integration._id, { name, provider }, req.ip);
+        await logAction(req.user!._id, 'CREATE', 'Integration', integration._id, { name, provider }, req.ip);
         res.status(201).json(integration);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
@@ -92,7 +92,7 @@ export const updateIntegration = async (req: AuthRequest, res: Response): Promis
         }
 
         await integration.save();
-        await logAction(req.user!._id, 'INTEGRATION_UPDATED', 'Integration', integration._id, req.body, req.ip);
+        await logAction(req.user!._id, 'UPDATE', 'Integration', integration._id, req.body, req.ip);
         res.json(integration);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
@@ -108,7 +108,7 @@ export const deleteIntegration = async (req: AuthRequest, res: Response): Promis
         }
 
         await integration.deleteOne();
-        await logAction(req.user!._id, 'INTEGRATION_DELETED', 'Integration', integration._id, { name: integration.name }, req.ip);
+        await logAction(req.user!._id, 'DELETE', 'Integration', integration._id, { name: integration.name }, req.ip);
         res.json({ message: 'Integration deleted successfully' });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
@@ -150,7 +150,7 @@ export const updateLicenseState = async (req: AuthRequest, res: Response): Promi
         };
 
         const license = await LicenseState.findOneAndUpdate({}, { $set: payload }, { upsert: true, new: true });
-        await logAction(req.user!._id, 'LICENSE_UPDATED', 'LicenseState', license!._id, payload, req.ip);
+        await logAction(req.user!._id, 'UPDATE', 'LicenseState', license!._id, payload, req.ip);
         res.json(license);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
@@ -186,7 +186,7 @@ export const updateBillingSummary = async (req: AuthRequest, res: Response): Pro
         };
 
         const billing = await BillingSummary.findOneAndUpdate({}, { $set: payload }, { upsert: true, new: true });
-        await logAction(req.user!._id, 'BILLING_UPDATED', 'BillingSummary', billing!._id, payload, req.ip);
+        await logAction(req.user!._id, 'UPDATE', 'BillingSummary', billing!._id, payload, req.ip);
         res.json(billing);
     } catch (error: any) {
         res.status(500).json({ message: error.message });

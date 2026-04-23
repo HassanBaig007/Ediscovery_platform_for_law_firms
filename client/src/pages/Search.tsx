@@ -14,7 +14,7 @@ import { useToastStore } from '../store/toastStore';
 import { Badge } from '../components/ui/Badge';
 import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
-import { formatRelevanceStatusLabel } from '../lib/content';
+import { formatRelevanceStatus } from '../utils/formatters';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, ValidationModule]);
 
@@ -71,7 +71,7 @@ const formatBytes = (value?: number) => {
 
 const RelevanceCellRenderer = (params: any) => {
     const value = String(params.value || 'NOT_RELEVANT');
-    const label = formatRelevanceStatusLabel(value);
+    const label = formatRelevanceStatus(value);
 
     const className =
         value === 'HIGHLY_RELEVANT'

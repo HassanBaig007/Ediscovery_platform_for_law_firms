@@ -4,10 +4,10 @@ import { History, X, Loader2 } from 'lucide-react';
 import api from '../../services/api';
 import { useReview } from '../../context/ReviewContext';
 import {
-    formatAuditActionLabel,
-    formatPrivilegeStatusLabel,
-    formatRelevanceStatusLabel
-} from '../../lib/content';
+    formatAuditAction,
+    formatPrivilegeStatus,
+    formatRelevanceStatus
+} from '../../utils/formatters';
 
 interface CodingFormData {
     privilegeStatus: 'NOT_PRIVILEGED' | 'ATTORNEY_CLIENT' | 'WORK_PRODUCT' | 'NEEDS_REVIEW';
@@ -113,7 +113,7 @@ const CodingPanel: React.FC = () => {
                                     {...register('privilegeStatus')}
                                     className="text-primary focus:ring-primary"
                                 />
-                                <span className="text-sm text-foreground">{formatPrivilegeStatusLabel(status)}</span>
+                                <span className="text-sm text-foreground">{formatPrivilegeStatus(status)}</span>
                             </label>
                         ))}
                     </div>
@@ -147,7 +147,7 @@ const CodingPanel: React.FC = () => {
                                     {...register('relevanceStatus')}
                                     className="sr-only"
                                 />
-                                {formatRelevanceStatusLabel(status)}
+                                {formatRelevanceStatus(status)}
                             </label>
                         ))}
                     </div>
@@ -213,7 +213,7 @@ const CodingPanel: React.FC = () => {
                                 history.map((log) => (
                                     <div key={log._id || log.id} className="text-xs space-y-1 bg-background p-2 rounded border border-border">
                                         <div className="flex justify-between items-center text-foreground font-medium">
-                                            <span>{formatAuditActionLabel(log.action)}</span>
+                                            <span>{formatAuditAction(log.action)}</span>
                                             <span className="text-muted-foreground/80">{new Date(log.createdAt).toLocaleDateString()}</span>
                                         </div>
                                         <div className="text-muted-foreground">By {log.userId?.firstName || 'System'} {log.userId?.lastName || ''}</div>
