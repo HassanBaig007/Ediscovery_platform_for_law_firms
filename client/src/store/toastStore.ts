@@ -61,4 +61,20 @@ export const toast = {
   info: (title: string, message?: string) => {
     useToastStore.getState().addToast({ type: 'info', title, message });
   },
+  operationSuccess: (entityLabel: string, actionPastTense = 'updated', message?: string) => {
+    const title = `${entityLabel} ${actionPastTense}`;
+    useToastStore.getState().addToast({
+      type: 'success',
+      title,
+      message: message ?? `${entityLabel} was ${actionPastTense.toLowerCase()} successfully.`
+    });
+  },
+  operationError: (entityLabel: string, actionVerb = 'update', message?: string) => {
+    const title = `${entityLabel} ${actionVerb} failed`;
+    useToastStore.getState().addToast({
+      type: 'error',
+      title,
+      message: message ?? `Unable to ${actionVerb.toLowerCase()} ${entityLabel.toLowerCase()}. Please try again.`
+    });
+  }
 };

@@ -22,6 +22,7 @@ import { cn } from '../lib/utils';
 import api from '../services/api';
 import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
+import { formatRoleLabel } from '../lib/content';
 
 interface User {
   id: string;
@@ -50,10 +51,10 @@ const normalizeUser = (raw: any): User => ({
 });
 
 const ROLES = [
-  { value: 'ADMIN', label: 'Admin', color: 'bg-destructive/12 text-destructive border-destructive/20', bg: 'bg-destructive/10', text: 'text-destructive' },
-  { value: 'PARTNER', label: 'Partner', color: 'bg-purple/12 text-purple border-purple/20', bg: 'bg-purple/10', text: 'text-purple' },
-  { value: 'ASSOCIATE', label: 'Associate', color: 'bg-primary/12 text-primary border-primary/20', bg: 'bg-primary/10', text: 'text-primary' },
-  { value: 'PARALEGAL', label: 'Paralegal', color: 'bg-success/12 text-success border-success/20', bg: 'bg-success/10', text: 'text-success' },
+  { value: 'ADMIN', label: formatRoleLabel('ADMIN'), color: 'bg-destructive/12 text-destructive border-destructive/20', bg: 'bg-destructive/10', text: 'text-destructive' },
+  { value: 'PARTNER', label: formatRoleLabel('PARTNER'), color: 'bg-purple/12 text-purple border-purple/20', bg: 'bg-purple/10', text: 'text-purple' },
+  { value: 'ASSOCIATE', label: formatRoleLabel('ASSOCIATE'), color: 'bg-primary/12 text-primary border-primary/20', bg: 'bg-primary/10', text: 'text-primary' },
+  { value: 'PARALEGAL', label: formatRoleLabel('PARALEGAL'), color: 'bg-success/12 text-success border-success/20', bg: 'bg-success/10', text: 'text-success' },
 ];
 
 

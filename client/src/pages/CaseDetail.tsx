@@ -16,6 +16,7 @@ import { Skeleton } from '../components/ui/Skeleton';
 import api from '../services/api';
 import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
+import { formatCaseRoleLabel } from '../lib/content';
 
 interface CaseAnalytics {
     totalDocuments: number;
@@ -384,7 +385,7 @@ const CaseDetail = () => {
                                                         ? `${member.user.firstName} ${member.user.lastName}`
                                                         : member.user?.email || String(member.user)}
                                                 </div>
-                                                <div className="text-xs text-muted-foreground">{member.role}</div>
+                                                <div className="text-xs text-muted-foreground">{formatCaseRoleLabel(member.role)}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -428,9 +429,9 @@ const CaseDetail = () => {
                                         value={selectedTeamRole}
                                         onChange={(e) => setSelectedTeamRole(e.target.value)}
                                     >
-                                        <option value="LEAD">Lead</option>
-                                        <option value="REVIEWER">Reviewer</option>
-                                        <option value="PARALEGAL">Paralegal</option>
+                                        <option value="LEAD">{formatCaseRoleLabel('LEAD')}</option>
+                                        <option value="REVIEWER">{formatCaseRoleLabel('REVIEWER')}</option>
+                                        <option value="PARALEGAL">{formatCaseRoleLabel('PARALEGAL')}</option>
                                     </select>
                                 </div>
                             </div>

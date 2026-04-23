@@ -12,6 +12,12 @@ import { Badge } from '../components/ui/Badge';
 import { useAuthStore } from '../store/authStore';
 import { useRole } from '../hooks/useRole';
 import { dashboardService, DashboardStats, ActivityItem, CaseOverview } from '../services/dashboard.service';
+import {
+    formatRoleLabel,
+    ROLE_BADGE_CLASSNAMES,
+    ROLE_DASHBOARD_SUMMARIES,
+    WORKFLOW_STAGE_TERMS
+} from '../lib/content';
 
 const StatCard = ({
     icon: Icon,
@@ -135,14 +141,16 @@ const DashboardPage = () => {
         return 'Good evening';
     };
 
-    // Role label for the header badge
-    const roleLabel: Record<string, { label: string; color: string }> = {
-        ADMIN: { label: 'Administrator', color: 'bg-destructive/10 text-destructive border-destructive/20' },
-        PARTNER: { label: 'Partner', color: 'bg-purple/10 text-purple border-purple/20' },
-        ASSOCIATE: { label: 'Associate', color: 'bg-primary/10 text-primary border-primary/20' },
-        PARALEGAL: { label: 'Paralegal', color: 'bg-success/10 text-success border-success/20' },
-    };
-    const roleMeta = user?.role ? roleLabel[user.role] : null;
+    const normalizedRole = user?.role?.toUpperCase() ?? '';
+    const roleMeta = normalizedRole
+        ? {
+            label: formatRoleLabel(normalizedRole),
+            color: ROLE_BADGE_CLASSNAMES[normalizedRole] ?? 'bg-muted text-muted-foreground border-border'
+        }
+        : null;
+    const roleSummary = normalizedRole
+        ? ROLE_DASHBOARD_SUMMARIES[normalizedRole] ?? 'Review your assigned work and recent activity.'
+        : 'Review your assigned work and recent activity.';
 
     // Role-specific quick actions
     const quickActions = [
@@ -157,7 +165,15 @@ const DashboardPage = () => {
         { icon: Search, title: 'Search Documents', description: 'Search and review documents across cases.', label: 'Search', onClick: () => navigate('/cases'), color: 'primary', show: isAssociate },
         { icon: CheckCircle2, title: 'Review Queue', description: 'Continue reviewing documents in your queue.', label: 'Review', onClick: () => navigate('/cases'), color: 'success', show: isAssociate },
         // PARALEGAL
-        { icon: Upload, title: 'Upload Documents', description: 'Ingest new documents into a case.', label: 'Upload', onClick: () => navigate('/cases'), color: 'success', show: isParalegal },
+        {
+            icon: Upload,
+            title: 'Upload Documents',
+            description: `Upload files to start ${WORKFLOW_STAGE_TERMS.process.term.toLowerCase()} and ${WORKFLOW_STAGE_TERMS.ingest.term.toLowerCase()}.`,
+            label: 'Upload',
+            onClick: () => navigate('/cases'),
+            color: 'success',
+            show: isParalegal
+        },
         { icon: Users, title: 'Custodians', description: 'Manage document custodians for your cases.', label: 'Manage', onClick: () => navigate('/cases'), color: 'primary', show: isParalegal },
     ].filter(a => a.show);
 
@@ -177,10 +193,7 @@ const DashboardPage = () => {
                         )}
                     </div>
                     <p className="text-muted-foreground text-sm mt-0.5">
-                        {isAdmin && "Full system access — manage users, cases, and platform settings."}
-                        {isPartner && !isAdmin && "Oversee cases, review team performance, and approve productions."}
-                        {isAssociate && "Search and review documents assigned to your queue."}
-                        {isParalegal && "Upload documents, manage custodians, and track processing status."}
+                        {roleSummary}
                     </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => navigate('/cases')} className="hidden sm:flex gap-1.5">

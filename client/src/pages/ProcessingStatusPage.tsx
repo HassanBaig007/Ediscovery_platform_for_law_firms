@@ -7,6 +7,7 @@ import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
 import { analyticsService, CaseAnalytics } from '../services/analytics.service';
 import { ErrorState } from '../components/ui/ErrorState';
+import { CONTENT_TONE, WORKFLOW_STAGE_TERMS } from '../lib/content';
 
 const ProcessingStatusPage = () => {
   const { id: caseId } = useParams<{ id: string }>();
@@ -54,7 +55,7 @@ const ProcessingStatusPage = () => {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Processing Status</h1>
-          <p className="text-muted-foreground mt-1">Track ingestion and review completion for this case.</p>
+          <p className="text-muted-foreground mt-1">{CONTENT_TONE.processingSummary}</p>
         </div>
       </div>
 
@@ -64,13 +65,15 @@ const ProcessingStatusPage = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /> Processing Status</CardTitle>
-            <CardDescription>Live queue counters were removed from this page to avoid misleading mock-style values.</CardDescription>
+            <CardDescription>
+              Status details below describe document readiness from {WORKFLOW_STAGE_TERMS.upload.term.toLowerCase()} through {WORKFLOW_STAGE_TERMS.ingest.term.toLowerCase()}.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
               {analytics && analytics.totalDocuments > 0
-                ? 'Documents are available in this case. Use the data grid for real-time ingestion and review state.'
-                : 'No documents have been ingested in this case yet.'}
+                ? 'Documents are available in this case. Use the data grid for current upload, processing, and ingestion state.'
+                : 'No documents are available for ingestion in this case yet.'}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => navigate(`/cases/${caseId}`)}>Back to Case</Button>

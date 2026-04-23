@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Button } from './Button';
+import { getPermissionDeniedMessage } from '../../lib/content';
 
 interface PermissionDeniedProps {
   requiredRole?: string;
@@ -16,12 +17,13 @@ const PermissionDenied: React.FC<PermissionDeniedProps> = ({ requiredRole }) => 
       </div>
       <h2 className="text-2xl font-semibold mb-2">Access restricted</h2>
       <p className="text-sm text-muted-foreground mb-6">
-        You do not have the required permissions{requiredRole ? ` (required: ${requiredRole})` : ''} to view this page.
+        {getPermissionDeniedMessage(requiredRole)}
       </p>
+      <p className="text-xs text-muted-foreground mb-6">If this seems unexpected, contact an administrator to confirm your role assignment.</p>
 
       <div className="flex justify-center gap-3">
-        <Button variant="outline" onClick={() => window.history.back()}>Go back</Button>
-        <Button onClick={() => window.location.reload()}>Reload</Button>
+        <Button variant="outline" onClick={() => window.history.back()}>Return</Button>
+        <Button onClick={() => window.location.reload()}>Reload Page</Button>
       </div>
     </div>
   );

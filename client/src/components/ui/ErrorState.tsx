@@ -1,6 +1,7 @@
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from './Button';
 import { Card, CardContent } from './Card';
+import { CONTENT_TONE } from '../../lib/content';
 
 interface ErrorStateProps {
   title?: string;
@@ -11,7 +12,7 @@ interface ErrorStateProps {
 
 export function ErrorState({
   title = 'Something went wrong',
-  message = 'We encountered an error while loading your data. Please try again.',
+  message = `We encountered an error while loading your data. ${CONTENT_TONE.retryHint}`,
   onRetry,
   className = ''
 }: ErrorStateProps) {
@@ -30,7 +31,7 @@ export function ErrorState({
             className="border-destructive/30 text-destructive hover:bg-destructive/10"
           >
             <RefreshCw className="mr-2 h-4 w-4" />
-            Try Again
+            Retry
           </Button>
         )}
       </CardContent>

@@ -20,6 +20,12 @@ import api from '../services/api';
 import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
 import { useToastStore } from '../store/toastStore';
+import {
+  formatAuditActionLabel,
+  formatAuditActionPastTenseLabel,
+  formatEntityTypeLabel,
+  getAuditActionClassName
+} from '../lib/content';
 
 interface AuditLog {
   id: string;
@@ -35,38 +41,6 @@ interface AuditLog {
   userAgent?: string;
   createdAt: string;
 }
-
-const ACTION_COLORS: Record<string, string> = {
-  'CREATE': 'bg-success/12 text-success border-success/20',
-  'UPDATE': 'bg-primary/12 text-primary border-primary/20',
-  'DELETE': 'bg-destructive/12 text-destructive border-destructive/20',
-  'VIEW': 'bg-muted text-muted-foreground border-border',
-  'LOGIN': 'bg-purple/12 text-purple border-purple/20',
-  'LOGOUT': 'bg-warning/12 text-warning border-warning/20',
-  'EXPORT': 'bg-info/12 text-info border-info/20',
-  'APPROVE': 'bg-success/12 text-success border-success/20',
-  'REJECT': 'bg-destructive/12 text-destructive border-destructive/20',
-};
-
-const formatAction = (action: string) => {
-  const map: Record<string, string> = {
-    'CREATE': 'created',
-    'UPDATE': 'updated',
-    'DELETE': 'deleted',
-    'VIEW': 'viewed',
-    'LOGIN': 'logged into',
-    'LOGOUT': 'logged out of',
-    'EXPORT': 'exported',
-    'APPROVE': 'approved',
-    'REJECT': 'rejected'
-  };
-  return map[action] || action.toLowerCase();
-};
-
-const formatEntityType = (type: string) => {
-  if (!type) return '';
-  return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-};
 
 const AuditLogsPage = () => {
   const navigate = useNavigate();
@@ -105,8 +79,7 @@ const AuditLogsPage = () => {
       const response = await api.get('/audit-logs');
       // Server returns { logs, total, page, pages }
       setLogs(response.data.logs || response.data || []);
-    } catch (error) {
-      console.error('Error fetching audit logs:', error);
+    } catch {
       setLogs([]);
       addToast({
         title: 'Failed to load audit logs',
@@ -149,8 +122,8 @@ const AuditLogsPage = () => {
         new Date(log.createdAt).toISOString(),
         log.userName,
         log.userEmail,
-        log.action,
-        log.entityType,
+        formatAuditActionLabel(log.action),
+        formatEntityTypeLabel(log.entityType),
         log.entityId || '',
         log.entityName || '',
         log.ipAddress || ''
@@ -173,18 +146,37 @@ const AuditLogsPage = () => {
   };
 
   const getActionIcon = (action: string) => {
-    switch (action) {
-      case 'CREATE': return Plus;
-      case 'UPDATE': return Edit;
-      case 'DELETE': return Trash2;
-      case 'VIEW': return Eye;
-      case 'LOGIN': return Lock;
-      case 'LOGOUT': return Unlock;
-      case 'EXPORT': return Download;
-      case 'APPROVE': return CheckCircle;
-      case 'REJECT': return XCircle;
-      default: return Activity;
+    const normalizedAction = action.toUpperCase();
+
+    if (normalizedAction.includes('CREATE') || normalizedAction.includes('ADD') || normalizedAction.includes('UPLOAD') || normalizedAction.includes('IMPORT')) {
+      return Plus;
     }
+    if (normalizedAction.includes('UPDATE') || normalizedAction.includes('EDIT') || normalizedAction.includes('CODE')) {
+      return Edit;
+    }
+    if (normalizedAction.includes('DELETE') || normalizedAction.includes('REMOVE') || normalizedAction.includes('REVOKE')) {
+      return Trash2;
+    }
+    if (normalizedAction.includes('VIEW')) {
+      return Eye;
+    }
+    if (normalizedAction.includes('DOWNLOAD') || normalizedAction.includes('EXPORT')) {
+      return Download;
+    }
+    if (normalizedAction.includes('LOGIN')) {
+      return Lock;
+    }
+    if (normalizedAction.includes('LOGOUT')) {
+      return Unlock;
+    }
+    if (normalizedAction.includes('APPROVE') || normalizedAction.includes('PRODUCED')) {
+      return CheckCircle;
+    }
+    if (normalizedAction.includes('REJECT') || normalizedAction.includes('DEACTIVATE')) {
+      return XCircle;
+    }
+
+    return Activity;
   };
 
   const filteredLogs = logs.filter(log => {
@@ -309,7 +301,7 @@ const AuditLogsPage = () => {
               >
                 <option value="ALL">All Actions</option>
                 {uniqueActions.map(action => (
-                  <option key={action} value={action}>{action}</option>
+                  <option key={action} value={action}>{formatAuditActionLabel(action)}</option>
                 ))}
               </select>
               <label htmlFor="entity-filter" className="sr-only">Filter by entity</label>
@@ -322,7 +314,7 @@ const AuditLogsPage = () => {
               >
                 <option value="ALL">All Entities</option>
                 {uniqueEntities.map(entity => (
-                  <option key={entity} value={entity}>{entity}</option>
+                  <option key={entity} value={entity}>{formatEntityTypeLabel(entity)}</option>
                 ))}
               </select>
               <label htmlFor="date-from" className="sr-only">From date</label>
@@ -382,7 +374,7 @@ const AuditLogsPage = () => {
                     }}
                   >
                     <div className="flex items-start gap-4">
-                      <div className={cn("p-2 rounded-lg flex-shrink-0", ACTION_COLORS[log.action] || 'bg-muted')}>
+                      <div className={cn('p-2 rounded-lg flex-shrink-0', getAuditActionClassName(log.action))}>
                         <ActionIcon className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -390,8 +382,8 @@ const AuditLogsPage = () => {
                           <div>
                             <p className="font-medium text-foreground">
                               <span className="font-semibold">{log.userName}</span>
-                              {' '}<span className="text-muted-foreground">{formatAction(log.action)}</span>{' '}
-                              <span className="font-semibold">{formatEntityType(log.entityType)}</span>
+                              {' '}<span className="text-muted-foreground">{formatAuditActionPastTenseLabel(log.action).toLowerCase()}</span>{' '}
+                              <span className="font-semibold">{formatEntityTypeLabel(log.entityType)}</span>
                               {log.entityName && (
                                 <span className="text-muted-foreground">: {log.entityName}</span>
                               )}
@@ -411,8 +403,8 @@ const AuditLogsPage = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <Badge variant="outline" className={cn("text-xs", ACTION_COLORS[log.action])}>
-                              {log.action.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
+                            <Badge variant="outline" className={cn('text-xs', getAuditActionClassName(log.action))}>
+                              {formatAuditActionLabel(log.action)}
                             </Badge>
                             <span className="text-xs text-muted-foreground whitespace-nowrap">
                               {getTimeAgo(log.createdAt)}
@@ -448,8 +440,8 @@ const AuditLogsPage = () => {
                 <div>
                   <span className="text-muted-foreground">Action</span>
                   <p className="font-semibold">
-                    <Badge variant="outline" className={ACTION_COLORS[selectedLog.action]}>
-                      {selectedLog.action.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
+                    <Badge variant="outline" className={getAuditActionClassName(selectedLog.action)}>
+                      {formatAuditActionLabel(selectedLog.action)}
                     </Badge>
                   </p>
                 </div>
@@ -460,7 +452,7 @@ const AuditLogsPage = () => {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Entity</span>
-                  <p className="font-semibold">{formatEntityType(selectedLog.entityType)}</p>
+                  <p className="font-semibold">{formatEntityTypeLabel(selectedLog.entityType)}</p>
                   {selectedLog.entityName && (
                     <p className="text-xs text-muted-foreground">{selectedLog.entityName}</p>
                   )}

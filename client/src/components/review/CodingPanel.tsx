@@ -3,6 +3,11 @@ import { useForm } from 'react-hook-form';
 import { History, X, Loader2 } from 'lucide-react';
 import api from '../../services/api';
 import { useReview } from '../../context/ReviewContext';
+import {
+    formatAuditActionLabel,
+    formatPrivilegeStatusLabel,
+    formatRelevanceStatusLabel
+} from '../../lib/content';
 
 interface CodingFormData {
     privilegeStatus: 'NOT_PRIVILEGED' | 'ATTORNEY_CLIENT' | 'WORK_PRODUCT' | 'NEEDS_REVIEW';
@@ -12,6 +17,20 @@ interface CodingFormData {
     reviewNotes: string;
     issueTagIds: string[];
 }
+
+const PRIVILEGE_STATUS_OPTIONS: CodingFormData['privilegeStatus'][] = [
+    'NOT_PRIVILEGED',
+    'ATTORNEY_CLIENT',
+    'WORK_PRODUCT',
+    'NEEDS_REVIEW'
+];
+
+const RELEVANCE_STATUS_OPTIONS: CodingFormData['relevanceStatus'][] = [
+    'HIGHLY_RELEVANT',
+    'RELEVANT',
+    'MARGINAL',
+    'NOT_RELEVANT'
+];
 
 const CodingPanel: React.FC = () => {
     const { currentDocument, tags, submitCoding, fetchNextDocument, goPrevious } = useReview();
@@ -86,7 +105,7 @@ const CodingPanel: React.FC = () => {
                 <section className="bg-card p-4 rounded-lg shadow-sm border border-border">
                     <h3 className="text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">Privilege</h3>
                     <div className="space-y-2">
-                        {['NOT_PRIVILEGED', 'ATTORNEY_CLIENT', 'WORK_PRODUCT', 'NEEDS_REVIEW'].map((status) => (
+                        {PRIVILEGE_STATUS_OPTIONS.map((status) => (
                             <label key={status} className="flex items-center space-x-2 cursor-pointer">
                                 <input
                                     type="radio"
@@ -94,7 +113,7 @@ const CodingPanel: React.FC = () => {
                                     {...register('privilegeStatus')}
                                     className="text-primary focus:ring-primary"
                                 />
-                                <span className="text-sm text-foreground capitalize">{status.replace('_', ' ').toLowerCase()}</span>
+                                <span className="text-sm text-foreground">{formatPrivilegeStatusLabel(status)}</span>
                             </label>
                         ))}
                     </div>
@@ -115,7 +134,7 @@ const CodingPanel: React.FC = () => {
                 <section className="bg-card p-4 rounded-lg shadow-sm border border-border">
                     <h3 className="text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">Relevance</h3>
                     <div className="grid grid-cols-2 gap-2">
-                        {['HIGHLY_RELEVANT', 'RELEVANT', 'MARGINAL', 'NOT_RELEVANT'].map((status) => (
+                        {RELEVANCE_STATUS_OPTIONS.map((status) => (
                             <label key={status} className={`
                                 cursor-pointer text-center py-2 px-1 rounded border text-xs font-medium transition-colors
                                 ${watch('relevanceStatus') === status
@@ -128,7 +147,7 @@ const CodingPanel: React.FC = () => {
                                     {...register('relevanceStatus')}
                                     className="sr-only"
                                 />
-                                {status.replace('_', ' ')}
+                                {formatRelevanceStatusLabel(status)}
                             </label>
                         ))}
                     </div>
@@ -194,7 +213,7 @@ const CodingPanel: React.FC = () => {
                                 history.map((log) => (
                                     <div key={log._id || log.id} className="text-xs space-y-1 bg-background p-2 rounded border border-border">
                                         <div className="flex justify-between items-center text-foreground font-medium">
-                                            <span>{log.action.replace('DOCUMENT_', '')}</span>
+                                            <span>{formatAuditActionLabel(log.action)}</span>
                                             <span className="text-muted-foreground/80">{new Date(log.createdAt).toLocaleDateString()}</span>
                                         </div>
                                         <div className="text-muted-foreground">By {log.userId?.firstName || 'System'} {log.userId?.lastName || ''}</div>

@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
+import { toTitleCaseLabel } from '../../lib/content'
 
 type StatusType =
   | "active" | "closed" | "archived" | "draft"
@@ -33,7 +34,7 @@ const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
   ({ status, size = "sm", className, ...props }, ref) => {
     const key = status.toLowerCase().replace(/ /g, "_") as StatusType
     const config = statusConfig[key] || {
-      label: status,
+      label: toTitleCaseLabel(status),
       classes: "bg-muted text-muted-foreground border-border",
       dot: "bg-muted-foreground",
     }
