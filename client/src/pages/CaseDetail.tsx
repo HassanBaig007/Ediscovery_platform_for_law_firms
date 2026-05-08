@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCaseStore } from '../store/caseStore';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import {
     ArrowLeft, Search, FileText, Settings,
     Clock, Database, Upload, BarChart3, Activity,
-    Plus, CheckCircle2, Loader2,
+    Plus, CheckCircle2, Loader2, ExternalLink, Users,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Skeleton } from '../components/ui/Skeleton';
 import api from '../services/api';
+import DocumentViewer from '../components/enhanced/document-viewer/DocumentViewer';
 import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
 import { formatCaseRole as formatCaseRoleLabel } from '../utils/formatters';
@@ -26,7 +27,8 @@ interface CaseAnalytics {
 }
 
 interface AvailableUser {
-    _id: string;
+    _id?: string;
+    id?: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -38,11 +40,34 @@ interface ActivityItem {
     description: string;
     timestamp: string;
     caseName?: string;
+    userName?: string;
+    action?: string;
+}
+
+interface DocumentItem {
+    id?: string;
+    _id?: string;
+    docNumber: string;
+    filename: string;
+    fileType: string;
+    fileSize: number;
+    uploadedAt: string;
+    custodianId?: { name?: string } | string;
+    coding?: {
+        privilegeStatus?: string;
+        relevanceStatus?: string;
+        isConfidential?: boolean;
+        reviewNotes?: string;
+        reviewedAt?: string;
+        reviewedBy?: { firstName?: string; lastName?: string; email?: string; role?: string } | string;
+    };
 }
 
 const CaseDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const defaultTab = searchParams.get('tab') || 'overview';
     const { currentCase, fetchCaseById, isLoading, error } = useCaseStore();
     const { hasFullAccess, getCaseRole } = useRole();
 
@@ -53,8 +78,13 @@ const CaseDetail = () => {
     const [selectedUserId, setSelectedUserId] = useState('');
     const [selectedTeamRole, setSelectedTeamRole] = useState('REVIEWER');
     const [isAddingMember, setIsAddingMember] = useState(false);
+    const [documents, setDocuments] = useState<DocumentItem[]>([]);
+    const [docsLoading, setDocsLoading] = useState(false);
+    const [isDocPreviewOpen, setIsDocPreviewOpen] = useState(false);
+    const [isDocPreviewLoading, setIsDocPreviewLoading] = useState(false);
+    const [previewDoc, setPreviewDoc] = useState<any | null>(null);
 
-    const caseRole = getCaseRole(currentCase);
+    const caseRole = currentCase ? getCaseRole(currentCase) : null;
     const canManageCase = hasFullAccess || caseRole === 'LEAD';
     const canUploadToCase = canManageCase || caseRole === 'PARALEGAL';
     const canReviewCase = canManageCase || caseRole === 'REVIEWER';
@@ -69,7 +99,7 @@ const CaseDetail = () => {
         try {
             const [analyticsRes, activityRes] = await Promise.all([
                 api.get(`/cases/${id}/analytics`),
-                api.get('/dashboard/activity?limit=5'),
+                api.get(`/cases/${id}/activity`, { params: { limit: 5 } }),
             ]);
             setAnalytics(analyticsRes.data);
             setRecentActivity(activityRes.data || []);
@@ -78,9 +108,54 @@ const CaseDetail = () => {
         }
     }, [id]);
 
+    const fetchDocuments = useCallback(async () => {
+        if (!id) return;
+        setDocsLoading(true);
+        try {
+            const res = await api.get(`/cases/${id}/documents`, { params: { page: 1, limit: 20 } });
+            const docs = res.data?.documents ?? res.data ?? [];
+            setDocuments(Array.isArray(docs) ? docs : []);
+        } catch {
+            setDocuments([]);
+        } finally {
+            setDocsLoading(false);
+        }
+    }, [id]);
+
     useEffect(() => {
         fetchAnalytics();
+        
+        // Listen for coding submissions to refresh analytics
+        const handleCoding = () => fetchAnalytics();
+        if (typeof window !== 'undefined') {
+            window.addEventListener('coding-submitted', handleCoding);
+        }
+        return () => {
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('coding-submitted', handleCoding);
+            }
+        };
     }, [fetchAnalytics]);
+
+    useEffect(() => {
+        fetchDocuments();
+    }, [fetchDocuments]);
+
+    useEffect(() => {
+        // Listen for document uploads to refresh the document list
+        const handleUpload = () => {
+            fetchDocuments();
+            fetchAnalytics();
+        };
+        if (typeof window !== 'undefined') {
+            window.addEventListener('document-uploaded', handleUpload);
+        }
+        return () => {
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('document-uploaded', handleUpload);
+            }
+        };
+    }, [fetchDocuments, fetchAnalytics]);
 
     const openAddMember = async () => {
         if (!id || !canManageTeam) return;
@@ -182,7 +257,7 @@ const CaseDetail = () => {
                 </div>
             </div>
 
-            <Tabs defaultValue="overview" className="space-y-5">
+            <Tabs defaultValue={defaultTab} className="space-y-5">
                 <TabsList className="bg-muted/60 p-1 border border-border/50">
                     <TabsTrigger value="overview" className="px-5 text-sm">Overview</TabsTrigger>
                     <TabsTrigger value="documents" className="px-5 text-sm">Documents</TabsTrigger>
@@ -330,39 +405,271 @@ const CaseDetail = () => {
                 </TabsContent>
 
                 <TabsContent value="documents">
-                    <Card className="p-10 text-center border-dashed border-2 border-border/60">
-                        <FileText className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                        <h3 className="text-base font-semibold text-foreground">Document Management</h3>
-                        <p className="text-muted-foreground text-sm mb-4">View and manage the case repository folder structure.</p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                            {canReviewCase && (
-                                <Button size="sm" onClick={() => navigate(`/cases/${id}/search`)}>Open Data Grid</Button>
+                    <div className="space-y-4">
+                        {/* Action bar */}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h2 className="text-base font-semibold text-foreground">
+                                Documents {documents.length > 0 && <span className="text-muted-foreground font-normal text-sm">({documents.length} shown)</span>}
+                            </h2>
+                            <div className="flex flex-wrap gap-2">
+                                {canUploadToCase && (
+                                    <Button size="sm" onClick={() => navigate(`/cases/${id}/upload`)} className="gap-1.5">
+                                        <Upload className="h-3.5 w-3.5" /> Upload Documents
+                                    </Button>
+                                )}
+                                {canUploadToCase && (
+                                    <Button variant="outline" size="sm" onClick={() => navigate(`/cases/${id}/custodians`)} className="gap-1.5">
+                                        <Users className="h-3.5 w-3.5" /> Custodians
+                                    </Button>
+                                )}
+                                {canReviewCase && (
+                                    <Button variant="outline" size="sm" onClick={() => navigate(`/cases/${id}/search`)} className="gap-1.5">
+                                        <Search className="h-3.5 w-3.5" /> Search & Review
+                                    </Button>
+                                )}
+                                {canUploadToCase && (
+                                    <Button variant="outline" size="sm" onClick={() => navigate(`/cases/${id}/chain-of-custody`)} className="gap-1.5">
+                                        <ExternalLink className="h-3.5 w-3.5" /> Chain of Custody
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Document list */}
+                        <Card>
+                            {docsLoading ? (
+                                <div className="flex justify-center py-12">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                </div>
+                            ) : documents.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+                                    <FileText className="h-12 w-12 text-muted-foreground/25 mb-3" />
+                                    <p className="font-medium text-foreground">No documents yet</p>
+                                    <p className="text-sm text-muted-foreground mt-1 mb-4">Upload documents to start the review process.</p>
+                                    {canUploadToCase && (
+                                        <Button size="sm" onClick={() => navigate(`/cases/${id}/upload`)} className="gap-1.5">
+                                            <Upload className="h-3.5 w-3.5" /> Upload Documents
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-border/60 bg-muted/30">
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Doc #</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Filename</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Type</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Custodian</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Size</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border/40">
+                                            {documents.map((doc, idx) => {
+                                                const docId = doc.id || doc._id;
+                                                const custodianName = typeof doc.custodianId === 'object' && doc.custodianId?.name
+                                                    ? doc.custodianId.name
+                                                    : '—';
+                                                // Determine review status based on coding data
+                                                const coding: any = doc.coding;
+                                                // Consider a document reviewed only when a reviewer has saved coding (reviewedAt exists)
+                                                const isReviewed = Boolean(coding?.reviewedAt);
+                                                const reviewStatus = isReviewed ? 'REVIEWED' : 'PENDING';
+                                                const sizeMB = doc.fileSize ? (doc.fileSize / 1024 / 1024).toFixed(2) + ' MB' : '—';
+                                                return (
+                                                    <tr
+                                                        key={docId ?? idx}
+                                                        className="hover:bg-muted/40 transition-colors cursor-pointer"
+                                                        onClick={async () => {
+                                                            if (!docId) return;
+                                                            setIsDocPreviewOpen(true);
+                                                            setIsDocPreviewLoading(true);
+                                                            try {
+                                                                const response = await api.get(`/documents/${docId}`);
+                                                                const fullDoc = response.data || {};
+                                                                setPreviewDoc(fullDoc);
+                                                            } catch (error) {
+                                                                console.error('Failed to load document details', error);
+                                                                setPreviewDoc({ id: String(docId), filename: doc.filename, fileType: doc.fileType, coding: doc.coding });
+                                                            } finally {
+                                                                setIsDocPreviewLoading(false);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{doc.docNumber}</td>
+                                                        <td className="px-4 py-3 font-medium text-foreground max-w-[200px] truncate">{doc.filename}</td>
+                                                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell uppercase text-xs">{doc.fileType || '—'}</td>
+                                                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{custodianName}</td>
+                                                        <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{sizeMB}</td>
+                                                        <td className="px-4 py-3">
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                                                                reviewStatus === 'REVIEWED' ? 'bg-success/12 text-success' : 'bg-warning/12 text-warning'
+                                                            }`}>
+                                                                {reviewStatus === 'REVIEWED' ? 'Reviewed' : 'Pending'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                    {documents.length >= 20 && (
+                                        <div className="px-4 py-3 border-t border-border/60 text-center">
+                                            <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${id}/search`)}>
+                                                View all documents in Search <ArrowLeft className="ml-1 h-3 w-3 rotate-180" />
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
                             )}
-                            {canUploadToCase && (
+                        </Card>
+
+                        {/* Document Preview Dialog */}
+                        <Dialog open={isDocPreviewOpen} onOpenChange={setIsDocPreviewOpen}>
+                            <DialogContent className="w-[96vw] max-w-[1120px] p-0 h-[82vh] overflow-hidden">
+                                <div className="flex flex-col h-full">
+                                    <div className="flex items-start justify-between gap-3 px-3.5 py-2 border-b border-border bg-card">
+                                        <div className="min-w-0 space-y-1">
+                                            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Document Preview</div>
+                                            <div className="text-sm font-semibold text-foreground truncate max-w-[56vw]">{previewDoc?.filename || 'Untitled document'}</div>
+                                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+                                                {previewDoc?.docNumber && (
+                                                    <span className="inline-flex items-center rounded-full border border-border/70 bg-muted px-2 py-0.5 font-medium uppercase tracking-wide">
+                                                        Doc {previewDoc.docNumber}
+                                                    </span>
+                                                )}
+                                                {previewDoc?.fileType && (
+                                                    <span className="inline-flex items-center rounded-full border border-border/70 bg-muted px-2 py-0.5 font-medium uppercase tracking-wide">
+                                                        {previewDoc.fileType}
+                                                    </span>
+                                                )}
+                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide ${previewDoc?.coding?.reviewedAt ? 'bg-success/12 text-success' : 'bg-warning/12 text-warning'}`}>
+                                                    {previewDoc?.coding?.reviewedAt ? 'Reviewed' : 'Pending review'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => setIsDocPreviewOpen(false)}>Close</Button>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-[260px_1fr] min-h-0">
+                                        <div className="border-b lg:border-b-0 lg:border-r border-border bg-muted/30 px-3 py-3 space-y-2.5 overflow-y-auto">
+                                            {isDocPreviewLoading ? (
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <Loader2 className="h-4 w-4 animate-spin" /> Loading document details...
+                                                </div>
+                                            ) : previewDoc ? (
+                                                <div className="space-y-2.5 text-sm">
+                                                    <div className="rounded-md border border-border bg-background/70 p-2.5">
+                                                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                                                            <div>
+                                                                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Doc #</div>
+                                                                <div className="font-semibold leading-5">{previewDoc.docNumber || 'N/A'}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Type</div>
+                                                                <div className="font-semibold truncate leading-5">{previewDoc.fileType || 'Unknown'}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</div>
+                                                                <div className={`font-semibold leading-5 ${previewDoc?.coding?.reviewedAt ? 'text-success' : 'text-warning'}`}>
+                                                                    {previewDoc?.coding?.reviewedAt ? 'Reviewed' : 'Pending review'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Custodian</div>
+                                                                <div className="font-semibold truncate leading-5">{previewDoc.custodianId?.name || 'Unknown'}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="rounded-md border border-border bg-background/70 p-2.5 space-y-2">
+                                                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Coding</div>
+                                                        <div className="space-y-1.5 text-sm leading-5">
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span className="text-muted-foreground">Privilege</span>
+                                                                <span className="font-medium text-right">{previewDoc.coding?.privilegeStatus || 'Not coded'}</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span className="text-muted-foreground">Relevance</span>
+                                                                <span className="font-medium text-right">{previewDoc.coding?.relevanceStatus || 'Not coded'}</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span className="text-muted-foreground">Confidential</span>
+                                                                <span className="font-medium text-right">{previewDoc.coding?.isConfidential ? 'Yes' : 'No'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="rounded-md border border-border bg-background/70 p-2.5 space-y-1.5">
+                                                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Reviewed by</div>
+                                                        <div className="font-medium leading-5">
+                                                            {previewDoc.coding?.reviewedBy && typeof previewDoc.coding.reviewedBy === 'object'
+                                                                ? `${previewDoc.coding.reviewedBy.firstName || ''} ${previewDoc.coding.reviewedBy.lastName || ''}`.trim() || previewDoc.coding.reviewedBy.email || 'Unknown'
+                                                                : 'Not reviewed yet'}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {previewDoc.coding?.reviewedAt ? new Date(previewDoc.coding.reviewedAt).toLocaleString() : 'No review timestamp'}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="rounded-md border border-border bg-background/70 p-2.5 space-y-1.5">
+                                                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Notes</div>
+                                                        <div className="text-sm text-muted-foreground whitespace-pre-wrap leading-5">
+                                                            {previewDoc.coding?.reviewNotes || 'No notes saved.'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                        <div className="min-h-0">
+                                            {previewDoc ? (
+                                                <DocumentViewer
+                                                    documentId={previewDoc.id || previewDoc._id}
+                                                    filename={previewDoc.filename}
+                                                    fileType={previewDoc.fileType}
+                                                    extractedText={previewDoc.extractedText}
+                                                    onDownload={async () => {
+                                                        try {
+                                                            const docId = previewDoc.id || previewDoc._id;
+                                                            const resp = await api.get(`/documents/${docId}/download`, { responseType: 'blob' });
+                                                            const url = window.URL.createObjectURL(new Blob([resp.data]));
+                                                            const a = document.createElement('a');
+                                                            a.href = url;
+                                                            a.download = previewDoc.filename || `document_${docId}`;
+                                                            document.body.appendChild(a);
+                                                            a.click();
+                                                            a.remove();
+                                                            window.URL.revokeObjectURL(url);
+                                                        } catch (err) {
+                                                            console.error('Download failed', err);
+                                                        }
+                                                    }}
+                                                    className="h-full"
+                                                />
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+
+                        {/* Secondary actions */}
+                        {canManageCase && (
+                            <div className="flex flex-wrap gap-2">
                                 <Button variant="outline" size="sm" onClick={() => navigate(`/cases/${id}/processing-status`)}>
                                     Processing Status
                                 </Button>
-                            )}
-                            {canUploadToCase && (
-                                <Button variant="outline" size="sm" onClick={() => navigate(`/cases/${id}/chain-of-custody`)}>
-                                    Chain of Custody
-                                </Button>
-                            )}
-                            {canManageCase && (
                                 <Button variant="outline" size="sm" onClick={() => navigate(`/cases/${id}/quality-control`)}>
                                     Quality Control
                                 </Button>
-                            )}
-                            {canManageCase && (
                                 <Button variant="outline" size="sm" onClick={() => navigate(`/cases/${id}/productions`)}>
                                     Production Sets
                                 </Button>
-                            )}
-                        </div>
-                        {!canReviewCase && !canUploadToCase && !canManageCase && (
-                            <p className="text-xs text-muted-foreground mt-3">You do not currently have document workflow permissions for this case.</p>
+                            </div>
                         )}
-                    </Card>
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="team">
@@ -416,7 +723,7 @@ const CaseDetail = () => {
                                     >
                                         <option value="">Select a user…</option>
                                         {availableUsers.map(u => (
-                                            <option key={u._id} value={u._id}>
+                                            <option key={u._id || u.id} value={u._id || u.id}>
                                                 {u.firstName} {u.lastName} ({u.email}) — {u.role}
                                             </option>
                                         ))}
@@ -444,6 +751,49 @@ const CaseDetail = () => {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+                </TabsContent>
+
+                <TabsContent value="activity">
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Activity className="h-4 w-4 text-muted-foreground" /> Recent Activity
+                            </CardTitle>
+                            <CardDescription className="text-xs">Recent actions and events for this case.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-2">
+                                {recentActivity.length > 0 ? recentActivity.map((item, idx) => (
+                                    <div key={idx} className="flex items-start gap-3 p-3 rounded-xl border border-border/60 hover:bg-muted/30 transition-colors">
+                                        <div className="bg-primary/8 p-2 rounded-lg mt-0.5 shrink-0">
+                                            <Clock className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-foreground leading-snug">{item.description || item.action || 'Case activity'}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                        {item.userName && <span className="text-xs text-muted-foreground">{item.userName}</span>}
+                                                        {item.caseName && <span className="text-xs text-muted-foreground">{item.caseName}</span>}
+                                                <span className="text-xs text-muted-foreground/60">
+                                                    {new Date(item.timestamp).toLocaleString(undefined, { 
+                                                        month: 'short', 
+                                                        day: 'numeric',
+                                                        hour: 'numeric',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="text-center py-12">
+                                        <Activity className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+                                        <p className="text-sm font-medium text-foreground">No activity yet</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Activity will appear here as team members work on this case.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </Tabs>
         </div>

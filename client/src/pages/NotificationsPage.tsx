@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { cn } from '../lib/utils';
 import { notificationService } from '../services/notification.service';
 import { ErrorState } from '../components/ui/ErrorState';
+import { emitNotificationsUpdated } from '../lib/notificationEvents';
 
 interface Notification {
   id: string;
@@ -68,6 +69,7 @@ const NotificationsPage = () => {
       setPages(Math.max(1, response.pages || 1));
       setTotal(response.total || 0);
       setUnreadCount(response.unreadCount || 0);
+      emitNotificationsUpdated(response.unreadCount || 0);
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError('Failed to load notifications from the server. Please check your connection.');
@@ -80,7 +82,11 @@ const NotificationsPage = () => {
     try {
       await notificationService.markAsRead(id);
       setNotifications((prev) => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      setUnreadCount((prev) => {
+        const next = Math.max(0, prev - 1);
+        emitNotificationsUpdated(next);
+        return next;
+      });
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -91,6 +97,7 @@ const NotificationsPage = () => {
       await notificationService.markAllAsRead();
       setNotifications((prev) => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
+      emitNotificationsUpdated(0);
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -103,7 +110,11 @@ const NotificationsPage = () => {
       setNotifications((prev) => prev.filter(n => n.id !== id));
       setTotal((prev) => Math.max(0, prev - 1));
       if (target && !target.isRead) {
-        setUnreadCount((prev) => Math.max(0, prev - 1));
+        setUnreadCount((prev) => {
+          const next = Math.max(0, prev - 1);
+          emitNotificationsUpdated(next);
+          return next;
+        });
       }
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -120,7 +131,11 @@ const NotificationsPage = () => {
       setNotifications((prev) => prev.filter(n => !selectedNotifications.includes(n.id)));
       setSelectedNotifications([]);
       setTotal((prev) => Math.max(0, prev - selectedNotifications.length));
-      setUnreadCount((prev) => Math.max(0, prev - removedUnread));
+      setUnreadCount((prev) => {
+        const next = Math.max(0, prev - removedUnread);
+        emitNotificationsUpdated(next);
+        return next;
+      });
     } catch (error) {
       console.error('Error deleting notifications:', error);
     }

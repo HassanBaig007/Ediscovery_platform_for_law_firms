@@ -276,6 +276,11 @@ const UploadPage = () => {
           : f
       ));
       setUploadStats(prev => ({ ...prev, completed: prev.completed + 1 }));
+      
+      // Notify document list to refresh
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('document-uploaded'));
+      }
     } catch (error) {
       const apiError = error as {
         response?: { data?: { message?: string; error?: string } };
@@ -364,8 +369,8 @@ const UploadPage = () => {
             </Button>
           )}
           {files.some(f => f.status === 'completed') && (
-            <Button variant="outline" onClick={() => navigate(`/cases/${caseId}`)}>
-              <List className="mr-2 h-4 w-4" /> Open Case Documents
+            <Button variant="outline" onClick={() => navigate(`/cases/${caseId}?tab=documents`)}>
+              <List className="mr-2 h-4 w-4" /> View Documents
             </Button>
           )}
           <Button 

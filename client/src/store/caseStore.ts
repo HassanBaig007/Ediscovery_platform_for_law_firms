@@ -33,7 +33,7 @@ interface CaseState {
         sortOrder?: 'asc' | 'desc'
     ) => Promise<void>;
     fetchCaseById: (id: string) => Promise<void>;
-    createCase: (data: Partial<ICase>) => Promise<void>;
+    createCase: (data: Partial<ICase>) => Promise<ICase>;
     updateCase: (id: string, data: Partial<ICase>) => Promise<void>;
     deleteCase: (id: string) => Promise<void>;
     addTeamMember: (caseId: string, userId: string, role: string) => Promise<void>;
@@ -72,16 +72,22 @@ export const useCaseStore = create<CaseState>((set, get) => ({
         try {
             const response = await api.get('/cases', { params: { status, page, limit, search, sortBy, sortOrder } });
             const casesData = response.data.cases || response.data;
+            const normalize = (c: any) => {
+                if (!c) return c;
+                if (!c.id && c._id) c.id = c._id;
+                return c;
+            };
+            const normalizedCases = Array.isArray(casesData) ? casesData.map(normalize) : casesData;
             set({
-                cases: casesData,
+                cases: normalizedCases,
                 page: response.data.page || page,
                 pages: response.data.pages || 1,
                 total: response.data.total || 0,
                 statusCounts: response.data.statusCounts || {
-                    total: casesData.length,
-                    active: casesData.filter((c: ICase) => c.status === 'ACTIVE').length,
-                    closed: casesData.filter((c: ICase) => c.status === 'CLOSED').length,
-                    archived: casesData.filter((c: ICase) => c.status === 'ARCHIVED').length,
+                    total: (normalizedCases || []).length,
+                    active: (normalizedCases || []).filter((c: ICase) => c.status === 'ACTIVE').length,
+                    closed: (normalizedCases || []).filter((c: ICase) => c.status === 'CLOSED').length,
+                    archived: (normalizedCases || []).filter((c: ICase) => c.status === 'ARCHIVED').length,
                 },
                 isLoading: false
             });
@@ -108,7 +114,9 @@ export const useCaseStore = create<CaseState>((set, get) => ({
         set({ isLoading: true, error: null });
         try {
             const response = await api.get(`/cases/${id}`);
-            set({ currentCase: response.data, isLoading: false });
+            const caseObj = response.data;
+            if (caseObj && !caseObj.id && caseObj._id) caseObj.id = caseObj._id;
+            set({ currentCase: caseObj, isLoading: false });
         } catch (err: any) {
             console.error(`API failed to fetch case ${id}:`, err);
             set({ error: err.response?.data?.message || 'Case not found', isLoading: false, currentCase: null });
@@ -118,15 +126,22 @@ export const useCaseStore = create<CaseState>((set, get) => ({
     createCase: async (data: Partial<ICase>) => {
         set({ isLoading: true, error: null });
         try {
-            await api.post('/cases', data);
+            const response = await api.post('/cases', data);
+            console.log('[caseStore] Create case API response:', response.data);
+            const createdCase = response.data;
+            if (createdCase && !createdCase.id && createdCase._id) createdCase.id = createdCase._id;
+            console.log('[caseStore] Created case ID:', createdCase?.id);
+            console.log('[caseStore] Created case _id:', createdCase?._id);
             await get().fetchCases();
-            set({ isLoading: false });
+            set({ isLoading: false, currentCase: createdCase });
+            return createdCase; // Return the created case with ID
         } catch (err: any) {
             console.error('API failed to create case:', err);
             set({ 
                 isLoading: false,
                 error: err.response?.data?.message || 'Failed to create case'
             });
+            throw err; // Re-throw to allow modal to handle error
         }
     },
 

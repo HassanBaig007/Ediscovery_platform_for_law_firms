@@ -239,10 +239,13 @@ export const exportProduction = async (req: AuthRequest, res: Response): Promise
     try {
         const { id } = req.params;
 
-        const production = await Production.findById(id).populate({
-            path: 'documents.documentId',
-            populate: { path: 'custodianId' }
-        });
+        const production = await Production.findById(id)
+            .populate({
+                path: 'documents.documentId',
+                populate: { path: 'custodianId', select: 'name email' }
+            })
+            .populate('createdBy', 'firstName lastName email')
+            .populate('approvedBy', 'firstName lastName email');
 
         if (!production) {
             res.status(404).json({ message: 'Production set not found' });
@@ -266,7 +269,7 @@ export const exportProduction = async (req: AuthRequest, res: Response): Promise
             const doc = pDoc.documentId;
             const custodian = doc?.custodianId?.name || 'Unknown';
             const date = doc?.documentDate ? new Date(doc.documentDate).toISOString().split('T')[0] : '';
-
+            
             return [
                 pDoc.batesNumber || '',
                 doc?._id?.toString() || '',
@@ -285,7 +288,7 @@ export const exportProduction = async (req: AuthRequest, res: Response): Promise
         const safeSetName = String(production.setName)
             .replace(/[^a-zA-Z0-9-_]+/g, '_')
             .replace(/^_+|_+$/g, '') || 'production';
-
+        
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename="${safeSetName}_metadata.csv"`);
         res.status(200).send(csv);
@@ -317,7 +320,13 @@ export const getProductionsByCase = async (req: AuthRequest, res: Response): Pro
 export const getProductionById = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
-        const production = await Production.findById(id).populate('documents.documentId');
+        const production = await Production.findById(id)
+            .populate('createdBy', 'firstName lastName email')
+            .populate('approvedBy', 'firstName lastName email')
+            .populate({
+                path: 'documents.documentId',
+                populate: { path: 'custodianId', select: 'name email' }
+            });
         if (!production) {
             res.status(404).json({ message: 'Production set not found' });
             return;

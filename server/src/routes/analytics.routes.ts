@@ -16,7 +16,7 @@ router.use(protect);
 router.get('/analytics', authorize('ADMIN', 'PARTNER'), getPlatformAnalytics);
 
 // GET /api/cases/:caseId/analytics - Get case analytics
-router.get('/cases/:caseId/analytics', requireCaseAccess, authorize('ADMIN', 'PARTNER'), getCaseAnalytics);
+router.get('/cases/:caseId/analytics', requireCaseAccess, getCaseAnalytics);
 
 // GET /api/cases/:caseId/analytics/team - Get team performance
 router.get('/cases/:caseId/analytics/team', requireCaseAccess, authorize('ADMIN', 'PARTNER'), getTeamPerformance);

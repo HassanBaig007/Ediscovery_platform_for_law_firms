@@ -239,9 +239,9 @@ export const DocumentViewer = ({
   };
 
   const renderToolbar = () => (
-    <div className="h-12 bg-card border-b border-border flex items-center justify-between px-4 shrink-0">
+    <div className="h-10 bg-card border-b border-border flex items-center justify-between px-3.5 shrink-0">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-foreground truncate max-w-[300px]" title={filename}>
+        <span className="text-sm font-medium text-foreground truncate max-w-[260px]" title={filename}>
           {filename}
         </span>
         <span className="text-xs text-muted-foreground uppercase px-2 py-0.5 bg-muted rounded">
@@ -310,9 +310,9 @@ export const DocumentViewer = ({
   );
 
   const renderTextView = () => (
-    <div className="flex-1 overflow-auto bg-muted p-6">
+    <div className="flex-1 overflow-auto bg-muted px-2.5 py-2.5">
       <div 
-        className="relative bg-card shadow-2xl min-h-[1000px] w-full max-w-4xl mx-auto p-12 rounded-sm"
+        className="relative bg-card shadow-lg min-h-[720px] w-full max-w-[72ch] mx-auto px-6 py-8 rounded-sm"
         style={{ 
           transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
           transformOrigin: 'top center',
@@ -320,7 +320,7 @@ export const DocumentViewer = ({
         }}
       >
         {renderRedactionCanvas()}
-        <pre className="whitespace-pre-wrap font-sans text-foreground text-base leading-relaxed relative z-10 selection:bg-primary/20">
+        <pre className="whitespace-pre-wrap font-sans text-foreground text-[15px] leading-7 relative z-10 selection:bg-primary/20">
           {extractedText || "Document content preview unavailable. Use the download option to view the original file."}
         </pre>
       </div>
@@ -330,7 +330,7 @@ export const DocumentViewer = ({
   const renderImageView = () => {
     if (isLoading) {
       return (
-        <div className="flex-1 flex items-center justify-center bg-muted">
+        <div className="flex-1 flex items-center justify-center bg-muted px-2.5 py-2.5">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Loading image...</p>
@@ -358,7 +358,7 @@ export const DocumentViewer = ({
     }
 
     return (
-      <div className="flex-1 overflow-auto bg-muted p-6 flex items-center justify-center">
+      <div className="flex-1 overflow-auto bg-muted px-2.5 py-2.5 flex items-center justify-center">
         <div
           className="relative inline-block"
           style={{
@@ -378,7 +378,7 @@ export const DocumentViewer = ({
                 />
             </div>
           ) : (
-            <div className="bg-card p-12 rounded shadow-2xl relative">
+            <div className="bg-card px-8 py-10 rounded shadow-2xl relative">
               {renderRedactionCanvas()}
               <ImageIcon className="h-24 w-24 text-muted-foreground/20 mx-auto" />
             </div>
@@ -391,7 +391,7 @@ export const DocumentViewer = ({
   const renderPdfView = () => {
     if (isLoading) {
       return (
-        <div className="flex-1 overflow-auto bg-muted p-4">
+        <div className="flex-1 overflow-auto bg-muted px-2.5 py-2.5">
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
@@ -404,7 +404,7 @@ export const DocumentViewer = ({
 
     if (error || !previewUrl) {
       return (
-        <div className="flex-1 overflow-auto bg-muted p-4">
+        <div className="flex-1 overflow-auto bg-muted px-2.5 py-2.5">
           <div className="h-full flex items-center justify-center">
             <div className="text-center max-w-md">
               <FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
@@ -423,7 +423,7 @@ export const DocumentViewer = ({
     }
 
     return (
-      <div className="flex-1 overflow-auto bg-muted p-4">
+      <div className="flex-1 overflow-auto bg-muted px-4 py-4">
         <div
           className="w-full bg-card rounded-lg shadow-sm overflow-hidden"
           style={{
@@ -436,7 +436,7 @@ export const DocumentViewer = ({
             src={previewUrl}
             title={filename}
             className="w-full border-0"
-            style={{ height: 'calc(100vh - 13rem)', minHeight: '540px' }}
+            style={{ height: 'calc(100vh - 14rem)', minHeight: '500px' }}
           />
         </div>
       </div>
@@ -444,7 +444,7 @@ export const DocumentViewer = ({
   };
 
   const renderUnsupportedView = () => (
-    <div className="flex-1 flex items-center justify-center bg-muted">
+    <div className="flex-1 flex items-center justify-center bg-muted px-2.5 py-2.5">
       <div className="text-center max-w-md">
         <File className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-foreground mb-2">No Inline Preview Data</h3>

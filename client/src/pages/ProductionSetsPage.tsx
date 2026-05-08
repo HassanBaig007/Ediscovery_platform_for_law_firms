@@ -67,6 +67,8 @@ const ProductionSetsPage = () => {
   const [availableDocs, setAvailableDocs] = useState<any[]>([]);
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
+  const [docsSearchQuery, setDocsSearchQuery] = useState('');
+  const [docsPrivilegedOnly, setDocsPrivilegedOnly] = useState(false);
   const [isBatesModalOpen, setIsBatesModalOpen] = useState(false);
   const [batesTargetProduction, setBatesTargetProduction] = useState<ProductionSet | null>(null);
   const { addToast } = useToastStore();
@@ -103,10 +105,18 @@ const ProductionSetsPage = () => {
     return Number.isNaN(date.getTime()) ? 'N/A' : dateTimeFormatter.format(date);
   };
 
-  const formatUser = (value?: string) => {
+  const formatUser = (value?: any) => {
     if (!value) return 'Unknown';
-    if (value.length <= 18) return value;
-    return `${value.slice(0, 8)}...${value.slice(-6)}`;
+    // Handle populated user object from backend
+    if (typeof value === 'object' && value.firstName) {
+      return `${value.firstName} ${value.lastName}`;
+    }
+    // Handle user ID string (fallback)
+    if (typeof value === 'string') {
+      if (value.length <= 18) return value;
+      return `${value.slice(0, 8)}...${value.slice(-6)}`;
+    }
+    return 'Unknown';
   };
 
   const parseDownloadFilename = (headerValue?: string) => {
@@ -638,16 +648,16 @@ const ProductionSetsPage = () => {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Created</span>
-                  <p className="font-semibold">{formatDateTime(selectedProduction.createdAt)}</p>
+                  <p className="font-semibold">{formatDateTime(detailedProduction?.createdAt || selectedProduction.createdAt)}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Created By</span>
-                  <p className="font-semibold font-mono text-xs">{selectedProduction.createdBy}</p>
+                  <p className="font-semibold text-sm">{formatUser(detailedProduction?.createdBy || selectedProduction.createdBy)}</p>
                 </div>
-                {selectedProduction.approvedBy && (
+                { (detailedProduction?.approvedBy || selectedProduction.approvedBy) && (
                   <div>
                     <span className="text-muted-foreground">Approved By</span>
-                    <p className="font-semibold font-mono text-xs">{selectedProduction.approvedBy}</p>
+                    <p className="font-semibold text-sm">{formatUser(detailedProduction?.approvedBy || selectedProduction.approvedBy)}</p>
                   </div>
                 )}
                 {selectedProduction.producedAt && (
@@ -734,7 +744,26 @@ const ProductionSetsPage = () => {
               <p className="text-center text-muted-foreground italic py-8">No documents available in this case.</p>
             ) : (
               <div className="space-y-2">
-                {availableDocs.map((doc: any) => (
+                <div className="flex items-center gap-2 mb-2">
+                  <Input
+                    placeholder="Filter documents by filename, custodian, or type"
+                    value={docsSearchQuery}
+                    onChange={(e) => setDocsSearchQuery(e.target.value)}
+                    className="flex-1"
+                  />
+                  <label className="inline-flex items-center text-sm gap-2">
+                    <input type="checkbox" checked={docsPrivilegedOnly} onChange={(e) => setDocsPrivilegedOnly(e.target.checked)} />
+                    <span className="text-muted-foreground">Privileged only</span>
+                  </label>
+                </div>
+                {availableDocs
+                  .filter((doc: any) => {
+                    if (docsPrivilegedOnly && !(doc.coding && doc.coding.privilegeStatus !== 'NOT_PRIVILEGED')) return false;
+                    if (!docsSearchQuery) return true;
+                    const q = docsSearchQuery.toLowerCase();
+                    return (doc.filename || '').toLowerCase().includes(q) || (doc.custodian || '').toLowerCase().includes(q) || (doc.mimeType || '').toLowerCase().includes(q);
+                  })
+                  .map((doc: any) => (
                   <label key={doc.id || doc._id} className="flex items-start gap-3 p-3 border rounded-md cursor-pointer hover:bg-muted/50 transition-colors">
                     <input
                       type="checkbox"

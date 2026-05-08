@@ -45,6 +45,18 @@ const NotificationSchema: Schema = new Schema({
     timestamps: true
 });
 
+NotificationSchema.set('toJSON', {
+    transform: (_doc, ret) => {
+        const normalized = ret as { _id?: unknown; __v?: unknown; id?: string };
+        if (normalized._id !== undefined && normalized._id !== null) {
+            normalized.id = String(normalized._id);
+        }
+        delete normalized._id;
+        delete normalized.__v;
+        return normalized;
+    }
+});
+
 // Index for efficient queries
 NotificationSchema.index({ userId: 1, createdAt: -1 });
 NotificationSchema.index({ userId: 1, isRead: 1 });

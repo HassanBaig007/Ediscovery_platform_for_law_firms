@@ -77,18 +77,14 @@ const Sidebar = ({ mobileOpen, onClose }: SidebarProps) => {
                 to={item.path}
                 onClick={handleNavClick}
                 className={cn(
-                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative",
+                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                     isActive(item.path)
-                        ? "bg-sidebar-accent/12 text-white"
+                        ? "bg-sidebar-accent/14 text-sidebar-foreground ring-1 ring-sidebar-accent/40"
                         : "text-sidebar-muted hover:text-sidebar-foreground hover:bg-white/[0.06]",
                     collapsed && !mobileOpen && "justify-center px-2.5"
                 )}
                 aria-current={isActive(item.path) ? 'page' : undefined}
             >
-                {/* Active pill indicator */}
-                {isActive(item.path) && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-sidebar-accent" />
-                )}
                 <item.icon className={cn(
                     "h-[18px] w-[18px] shrink-0 transition-colors",
                     isActive(item.path) ? "text-sidebar-accent" : "text-sidebar-muted group-hover:text-sidebar-foreground"
@@ -194,9 +190,9 @@ const Sidebar = ({ mobileOpen, onClose }: SidebarProps) => {
                             to="/profile"
                             onClick={handleNavClick}
                             className={cn(
-                                "group flex items-center justify-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                                    "group flex items-center justify-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                                 isActive('/profile')
-                                    ? "bg-sidebar-accent/12 text-white"
+                                        ? "bg-sidebar-accent/14 text-sidebar-foreground ring-1 ring-sidebar-accent/40"
                                     : "text-sidebar-muted hover:text-sidebar-foreground hover:bg-white/[0.06]"
                             )}
                         >
@@ -213,7 +209,7 @@ const Sidebar = ({ mobileOpen, onClose }: SidebarProps) => {
                         className={cn(
                             "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                             isActive('/profile')
-                                ? "bg-sidebar-accent/12 text-white"
+                                ? "bg-sidebar-accent/14 text-sidebar-foreground ring-1 ring-sidebar-accent/40"
                                 : "text-sidebar-muted hover:text-sidebar-foreground hover:bg-white/[0.06]"
                         )}
                     >

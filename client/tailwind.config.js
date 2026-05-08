@@ -8,18 +8,18 @@ export default {
     theme: {
         extend: {
             fontSize: {
-                // Readable defaults for WXGA+ while keeping density
-                xs: ['0.8125rem', { lineHeight: '1.15rem' }],  // 13px
-                sm: ['0.875rem', { lineHeight: '1.25rem' }],   // 14px
-                base: ['0.9375rem', { lineHeight: '1.45rem' }],// 15px (slightly denser than 16px)
-                lg: ['1.0625rem', { lineHeight: '1.6rem' }],   // 17px
+                // Accessibility-oriented fixed product scale
+                xs: ['0.875rem', { lineHeight: '1.25rem' }],   // 14px
+                sm: ['0.9375rem', { lineHeight: '1.375rem' }], // 15px
+                base: ['1rem', { lineHeight: '1.55rem' }],     // 16px
+                lg: ['1.125rem', { lineHeight: '1.75rem' }],   // 18px
                 xl: ['1.25rem', { lineHeight: '1.8rem' }],     // 20px
                 '2xl': ['1.5rem', { lineHeight: '2.05rem' }],  // 24px
                 '3xl': ['1.875rem', { lineHeight: '2.35rem' }],// 30px
             },
             fontFamily: {
-                sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+                sans: ['Inter', 'Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
+                display: ['Plus Jakarta Sans', 'Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
                 mono: ['JetBrains Mono', 'monospace'],
             },
             colors: {

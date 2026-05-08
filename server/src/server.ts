@@ -29,7 +29,8 @@ connectDB();
 })();
 
 // Middleware
-app.use(helmet());
+// CORS must be applied BEFORE helmet so that Access-Control-* headers are set
+// before helmet's restrictive Cross-Origin defaults can interfere.
 const devAllowedOrigin = (origin?: string) => {
     if (!origin) return true; // allow curl/postman
     if (process.env.CORS_ORIGIN) return origin === process.env.CORS_ORIGIN;
@@ -44,7 +45,18 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+app.use(helmet({
+    // Disable crossOriginResourcePolicy — its default 'same-origin' blocks
+    // cross-origin API responses (e.g. Vite dev server on a different port).
+    crossOriginResourcePolicy: false,
+}));
 app.use(express.json());
+
+// Log all requests for debugging
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    next();
+});
 
 // Public health check must be mounted before generic /api routers that apply auth middleware.
 app.get('/api/health', (req: Request, res: Response) => {

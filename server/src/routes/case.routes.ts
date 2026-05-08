@@ -8,7 +8,8 @@ import {
     deleteCase,
     addTeamMember,
     removeTeamMember,
-    getAvailableUsers
+    getAvailableUsers,
+    getCaseActivity
 } from '../controllers/case.controller';
 import { saveSearch, getSavedSearches } from '../controllers/search.controller';
 
@@ -22,6 +23,9 @@ router.route('/:id')
     .get(protect, getCaseById)
     .put(protect, updateCase) // Lead/Admin checked in controller
     .delete(protect, adminOnly, deleteCase);
+
+router.route('/:id/activity')
+    .get(protect, getCaseActivity);
 
 router.route('/:id/team')
     .post(protect, addTeamMember);

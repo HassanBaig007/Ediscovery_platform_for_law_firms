@@ -355,8 +355,8 @@ export const getCaseAnalytics = async (req: AuthRequest, res: Response): Promise
         const caseIdParam = req.params.caseId;
         const caseId = Array.isArray(caseIdParam) ? caseIdParam[0] : caseIdParam;
 
-        // Get case details
-        const caseItem = await Case.findOne(applyNonSyntheticCaseFilter({ _id: caseId }));
+        // Get case details - don't filter by synthetic when accessing by ID
+        const caseItem = await Case.findById(caseId);
         if (!caseItem) {
             res.status(404).json({ message: 'Case not found' });
             return;

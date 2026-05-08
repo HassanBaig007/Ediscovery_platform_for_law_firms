@@ -24,8 +24,15 @@ const LoginPage = () => {
         try {
             await login(email, password);
             navigate('/dashboard');
-        } catch (err) {
-            setError('Invalid email or password. Please try again.');
+        } catch (err: any) {
+            // Show the actual backend error message when available.
+            // Without this, network errors, CORS blocks, and wrong credentials
+            // all displayed the same misleading "Invalid email or password" text.
+            const backendMessage =
+                err?.response?.data?.message ||
+                err?.message ||
+                'Unable to sign in. Please check your credentials and try again.';
+            setError(backendMessage);
         } finally {
             setIsLoading(false);
         }

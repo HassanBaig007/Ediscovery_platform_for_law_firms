@@ -2,6 +2,18 @@ import { create } from 'zustand';
 import api from '../services/api';
 import { IDocument, ISavedSearch, ISearchFilters } from '../../../shared/types';
 
+const coerceDocumentList = (payload: any): IDocument[] => {
+    const candidates = [payload?.documents, payload?.docs, payload?.results, payload];
+
+    for (const candidate of candidates) {
+        if (Array.isArray(candidate)) {
+            return candidate as IDocument[];
+        }
+    }
+
+    return [];
+};
+
 interface SearchState {
     filters: ISearchFilters;
     results: IDocument[];
@@ -58,12 +70,16 @@ export const useSearchStore = create<SearchState>((set, get) => ({
             const searchFilters = { ...filters, caseId };
 
             const res = await api.post(`/documents/search?page=${page}`, searchFilters);
+            const documents = coerceDocumentList(res.data);
+            const total = Number(res.data?.total ?? documents.length ?? 0);
+            const currentPage = Number(res.data?.page ?? page);
+            const pages = Number(res.data?.pages ?? Math.max(1, Math.ceil(total / 50)));
 
             set({
-                results: res.data.documents,
-                total: res.data.total,
-                page: res.data.page,
-                pages: res.data.pages,
+                results: documents,
+                total,
+                page: currentPage,
+                pages,
                 isLoading: false
             });
         } catch (error: any) {

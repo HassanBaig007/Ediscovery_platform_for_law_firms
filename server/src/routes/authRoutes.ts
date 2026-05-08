@@ -4,6 +4,11 @@ import { protect, adminOnly } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
+// Test route to verify router is working
+router.get('/test', (req, res) => {
+    res.json({ message: 'Auth routes are working!' });
+});
+
 // Only authenticated Admins may create new user accounts
 router.post('/register', protect, adminOnly, registerUser);
 router.post('/login', loginUser);

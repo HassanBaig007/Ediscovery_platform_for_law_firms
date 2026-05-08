@@ -8,6 +8,10 @@ const MONGODB_URI =
     process.env.MONGO_URI ||
     'mongodb://localhost:27017/ediscovery_db';
 
+console.log('[DATABASE CONFIG] MONGODB_URI from env:', process.env.MONGODB_URI);
+console.log('[DATABASE CONFIG] MONGO_URI from env:', process.env.MONGO_URI);
+console.log('[DATABASE CONFIG] Using connection string:', MONGODB_URI);
+
 const connectDB = async (retries = 5, delay = 5000) => {
     try {
         await mongoose.connect(MONGODB_URI);

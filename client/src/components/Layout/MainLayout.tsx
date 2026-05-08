@@ -22,9 +22,11 @@ const MainLayout = () => {
       
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <HeaderBar onMenuClick={() => setMobileNavOpen(true)} />
-        <main id="main-content" className="flex-1 overflow-auto" tabIndex={-1}>
-          <div className="container mx-auto px-4 md:px-6 py-4 max-w-7xl animate-fade-in">
-            <Outlet />
+        <main id="main-content" className="flex-1 overflow-auto bg-gradient-to-b from-background via-background to-secondary/35" tabIndex={-1}>
+          <div className="mx-auto w-full max-w-[88rem] px-4 py-5 md:px-7 md:py-7 lg:px-8 animate-fade-in">
+            <section className="page-stack">
+              <Outlet />
+            </section>
           </div>
         </main>
       </div>

@@ -3,9 +3,9 @@ import User from '../models/User';
 
 const SYNTHETIC_CASE_MARKERS: Array<Record<string, unknown>> = [
     { caseName: { $regex: 'techcorp v\\. innovatellc', $options: 'i' } },
-    { caseName: { $regex: 'test case|dedup proof|review case|prod case', $options: 'i' } },
-    { clientName: { $regex: 'techcorp|test client|client review|prod client', $options: 'i' } },
-    { caseNumber: { $regex: '^(TC-|T-|REV-|P-|DEDUP-)', $options: 'i' } }
+    { caseName: { $regex: '^(test case - dedup|test case - review|test case - prod)', $options: 'i' } },
+    { clientName: { $regex: 'techcorp|client review|prod client', $options: 'i' } },
+    { caseNumber: { $regex: '^(TC-|REV-|P-|DEDUP-|SYN-)', $options: 'i' } }
 ];
 
 const SYNTHETIC_USER_EMAILS = [

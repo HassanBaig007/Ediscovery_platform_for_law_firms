@@ -68,16 +68,16 @@ const CustodiansPage = () => {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<string[][]>([]);
 
-  if (!canUpload && !hasFullAccess) {
-    return <PermissionDenied requiredRole="ADMIN, PARTNER, or PARALEGAL" />;
-  }
-
-
   useEffect(() => {
-    fetchCustodians();
+    if (canUpload || hasFullAccess) {
+      fetchCustodians();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId]);
 
+  if (!canUpload && !hasFullAccess) {
+    return <PermissionDenied requiredRole="ADMIN, PARTNER, or PARALEGAL" />;
+  }
 
   const fetchCustodians = async () => {
     setIsLoading(true);
@@ -124,10 +124,11 @@ const CustodiansPage = () => {
   const handleCreateCustodian = async () => {
     setIsProcessing(true);
     try {
-      const response = await api.post(`/cases/${caseId}/custodians`, formData);
-      setCustodians([...custodians, response.data]);
+      await api.post(`/cases/${caseId}/custodians`, formData);
       setIsCreateModalOpen(false);
       setFormData({ name: '', email: '', department: '', title: '' });
+      // Refresh the list from backend to get updated document counts
+      await fetchCustodians();
     } catch (error) {
       console.error('Error creating custodian:', error);
     } finally {
@@ -490,6 +491,7 @@ const CustodiansPage = () => {
               Cancel
             </Button>
             <Button 
+              type="button"
               onClick={handleCreateCustodian} 
               disabled={!formData.name || !formData.email || isProcessing}
             >

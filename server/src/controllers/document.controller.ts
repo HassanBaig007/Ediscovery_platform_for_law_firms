@@ -296,7 +296,8 @@ export const getDocumentById = async (req: AuthRequest, res: Response): Promise<
         const { id } = req.params as { id: string };
         const document = await Document.findById(id)
             .populate('tags')
-            .populate('custodianId');
+            .populate('custodianId')
+            .populate('coding.reviewedBy', 'firstName lastName email role');
 
         if (!document) {
             res.status(404).json({ message: 'Document not found' });

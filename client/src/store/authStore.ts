@@ -1,10 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import axios from 'axios';
 import { IUser } from '../../../shared/types';
 import api from '../services/api';
-
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface AuthState {
     user: IUser | null;
@@ -28,7 +25,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
 
             login: async (email: string, password: string) => {
-                const response = await axios.post(`${BASE_URL}/auth/login`, { email, password });
+                const response = await api.post('/auth/login', { email, password });
                 const { user, accessToken, refreshToken } = response.data.data;
                 set({ user, accessToken, refreshToken, isAuthenticated: true });
             },

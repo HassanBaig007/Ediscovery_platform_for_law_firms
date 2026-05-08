@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -11,11 +12,12 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { toast } from '../../store/toastStore';
+import { ICase } from '../../../../shared/types';
 
 interface CreateCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateCaseData) => Promise<void>;
+  onSubmit: (data: CreateCaseData) => Promise<ICase>;
 }
 
 export interface CreateCaseData {
@@ -27,6 +29,7 @@ export interface CreateCaseData {
 }
 
 export function CreateCaseModal({ isOpen, onClose, onSubmit }: CreateCaseModalProps) {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<CreateCaseData>({
     caseNumber: '',
@@ -46,7 +49,11 @@ export function CreateCaseModal({ isOpen, onClose, onSubmit }: CreateCaseModalPr
 
     setIsLoading(true);
     try {
-      await onSubmit(formData);
+      const createdCase = await onSubmit(formData);
+      console.log('[CreateCaseModal] Created case response:', createdCase);
+      console.log('[CreateCaseModal] Case ID:', createdCase?.id);
+      console.log('[CreateCaseModal] Case _id:', (createdCase as any)?._id);
+      
       toast.success('Case created successfully');
       setFormData({
         caseNumber: '',
@@ -56,8 +63,19 @@ export function CreateCaseModal({ isOpen, onClose, onSubmit }: CreateCaseModalPr
         description: '',
       });
       onClose();
-    } catch (error) {
-      toast.error('Failed to create case', error instanceof Error ? error.message : 'Unknown error');
+      
+      // Navigate to the newly created case detail page
+      // Handle both 'id' and '_id' from backend
+      const caseId = (createdCase as any)?._id || createdCase?.id;
+      console.log('[CreateCaseModal] Navigating to case ID:', caseId);
+      if (caseId) {
+        navigate(`/cases/${caseId}`);
+      } else {
+        console.error('[CreateCaseModal] No case ID found in response!');
+      }
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Unknown error';
+      toast.error('Failed to create case', errorMessage);
     } finally {
       setIsLoading(false);
     }

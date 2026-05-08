@@ -217,23 +217,6 @@ router.get('/api/production/:productionSetId/validate', protect, requireCaseAcce
 // Security Routes
 // ============================================
 
-router.post('/api/auth/login', async (req: Request, res: Response) => {
-    try {
-        const services = getServices();
-        const credentials = req.body;
-        const result = await services.securityManager.authenticate(credentials);
-        
-        if (result.success) {
-            res.json(result);
-        } else {
-            res.status(401).json(result);
-        }
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
-        res.status(500).json({ error: errorMessage });
-    }
-});
-
 router.post('/api/auth/logout', protect, async (req: Request, res: Response) => {
     try {
         const services = getServices();

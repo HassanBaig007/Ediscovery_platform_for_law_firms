@@ -20,12 +20,12 @@
 
         /* ── Secondary ── */
         --secondary: 220 14% 96%;
-        --secondary-foreground: 220 10% 38%;
+        --secondary-foreground: 220 12% 32%;
 
         /* ── Muted ── */
         --muted: 220 14% 96%;
         /* Darker than before to keep AA contrast on light surfaces */
-        --muted-foreground: 220 10% 38%;
+        --muted-foreground: 220 12% 34%;
 
         /* ── Accent – vivid teal ── */
         --accent: 172 66% 50%;
@@ -63,7 +63,7 @@
         --sidebar-bg: 225 30% 12%;
         --sidebar-fg: 220 14% 96%;
         /* Ensure readable labels on dark sidebar */
-        --sidebar-muted: 220 12% 72%;
+        --sidebar-muted: 220 12% 78%;
         --sidebar-border: 220 20% 22%;
         --sidebar-accent: 221 83% 60%;
     }
@@ -85,7 +85,7 @@
         --secondary-foreground: 215 20% 78%;
 
         --muted: 223 40% 16%;
-        --muted-foreground: 218 12% 68%;
+        --muted-foreground: 218 12% 74%;
 
         --accent: 172 66% 50%;
         --accent-foreground: 224 47% 7%;
@@ -112,9 +112,15 @@
         /* ── Sidebar palette (dark) ── */
         --sidebar-bg: 225 30% 9%;
         --sidebar-fg: 213 31% 91%;
-        --sidebar-muted: 218 12% 68%;
+        --sidebar-muted: 218 12% 76%;
         --sidebar-border: 222 38% 18%;
         --sidebar-accent: 217 91% 60%;
+    }
+
+    html {
+        font-size: 100%;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
     }
 }
 
@@ -126,6 +132,8 @@
     body {
         @apply bg-background text-foreground antialiased;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-size: 1rem;
+        line-height: 1.55;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
@@ -133,6 +141,7 @@
     h1, h2, h3, h4 {
         font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
         letter-spacing: -0.025em;
+        line-height: 1.2;
     }
 
     code, pre, .font-mono {
@@ -146,13 +155,22 @@
         @apply font-display text-2xl md:text-3xl font-bold tracking-tight text-foreground;
     }
     .text-page-subtitle {
-        @apply text-sm md:text-base text-muted-foreground;
+        @apply text-base text-muted-foreground max-w-[72ch];
     }
     .text-section-title {
-        @apply text-sm font-semibold text-muted-foreground uppercase tracking-wider;
+        @apply text-sm font-semibold text-muted-foreground uppercase tracking-[0.06em];
     }
     .text-micro {
-        @apply text-xs text-muted-foreground;
+        @apply text-sm text-muted-foreground;
+    }
+    .page-surface {
+        @apply rounded-2xl border border-border/60 bg-card/70 shadow-elevation-1;
+    }
+    .page-stack {
+        @apply space-y-6 md:space-y-8;
+    }
+    .section-stack {
+        @apply space-y-4 md:space-y-5;
     }
 }
 
@@ -179,26 +197,111 @@
 .ag-theme-quartz,
 .ag-theme-quartz-dark {
     --ag-background-color: hsl(var(--card));
-    --ag-header-background-color: hsl(var(--muted));
-    --ag-odd-row-background-color: hsl(var(--muted) / 0.3);
-    --ag-row-hover-color: hsl(var(--primary) / 0.06);
-    --ag-selected-row-background-color: hsl(var(--primary) / 0.1);
-    --ag-border-color: hsl(var(--border));
-    --ag-header-foreground-color: hsl(var(--foreground));
-    --ag-foreground-color: hsl(var(--foreground));
+    --ag-header-background-color: hsl(var(--muted) / 0.5);
+    --ag-odd-row-background-color: hsl(var(--muted) / 0.18);
+    --ag-row-hover-color: hsl(var(--primary) / 0.12);
+    --ag-selected-row-background-color: hsl(var(--primary) / 0.18);
+    --ag-border-color: hsl(var(--border) / 0.6);
+    --ag-header-foreground-color: hsl(var(--foreground) / 0.92);
+    --ag-foreground-color: hsl(var(--foreground) / 0.9);
     --ag-font-family: 'Inter', system-ui, sans-serif;
     --ag-font-size: 13px;
-    --ag-row-border-color: hsl(var(--border));
+    --ag-row-border-color: hsl(var(--border) / 0.4);
     --ag-range-selection-border-color: hsl(var(--primary));
     --ag-checkbox-checked-color: hsl(var(--primary));
     --ag-input-focus-border-color: hsl(var(--primary));
     --ag-border-radius: 0px;
     --ag-wrapper-border-radius: 0.75rem;
-    --ag-header-height: 44px;
-    --ag-row-height: 48px;
+    --ag-header-height: 48px;
+    --ag-row-height: 56px;
     --ag-header-column-separator-display: block;
-    --ag-header-column-separator-color: hsl(var(--border));
-    --ag-header-column-separator-height: 50%;
+    --ag-header-column-separator-color: hsl(var(--border) / 0.3);
+    --ag-header-column-separator-height: 60%;
+    --ag-cell-horizontal-padding: 14px;
+    --ag-header-cell-moving-background-color: hsl(var(--primary) / 0.1);
+    --ag-row-spacing: 2px;
+}
+
+/* Enhanced grid row striping and hover */
+.search-results-grid .ag-row {
+    border-bottom: 1px solid hsl(var(--border) / 0.25);
+    transition: background-color 0.12s ease-out;
+}
+
+.search-results-grid .ag-row:hover {
+    background-color: hsl(var(--primary) / 0.12) !important;
+}
+
+.search-results-grid .ag-row.ag-row-selected {
+    background-color: hsl(var(--primary) / 0.18) !important;
+}
+
+.search-results-grid .ag-row.ag-row-selected:hover {
+    background-color: hsl(var(--primary) / 0.22) !important;
+}
+
+/* Header styling with WCAG AA compliant contrast */
+.search-results-grid .ag-header-cell {
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: hsl(var(--foreground) / 0.92);
+    background-color: hsl(var(--muted) / 0.45);
+    border-bottom: 2px solid hsl(var(--border) / 0.5);
+    padding: 0 14px;
+}
+
+.search-results-grid .ag-header-cell::after {
+    background-color: hsl(var(--border) / 0.35);
+}
+
+/* Cell styling with WCAG AA contrast */
+.search-results-grid .ag-cell {
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    color: hsl(var(--foreground) / 0.9);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.search-results-grid .ag-cell:focus {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: -2px;
+}
+
+/* Checkbox column */
+.search-results-grid .ag-checkbox-input-wrapper,
+.search-results-grid .ag-header-checkbox-input-wrapper {
+    margin: 0 6px;
+}
+
+/* Pagination control styling */
+.search-results-grid .ag-paging-panel {
+    background-color: hsl(var(--card));
+    border-top: 1px solid hsl(var(--border) / 0.35);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: hsl(var(--muted-foreground) / 0.9);
+    font-weight: 500;
+}
+
+.search-results-grid .ag-paging-button {
+    transition: all 0.12s ease-out;
+}
+
+.search-results-grid .ag-paging-button:not(.ag-disabled):hover {
+    background-color: hsl(var(--muted) / 0.3);
+}
+
+.search-results-grid .ag-paging-button {
+    transition: all 0.15s ease-out;
+}
+
+.search-results-grid .ag-paging-button:not(.ag-disabled):hover {
+    background-color: hsl(var(--muted) / 0.4);
 }
 
 /* ── Selection highlight ── */
@@ -218,9 +321,9 @@
 
 /* ── Focus-visible global ring ── */
 :focus-visible {
-    outline: 2px solid hsl(var(--ring));
+    outline: 3px solid hsl(var(--ring));
     outline-offset: 2px;
-    border-radius: 4px;
+    border-radius: 6px;
 }
 
 /* ── Reusable utility: semantic card hover lift ── */

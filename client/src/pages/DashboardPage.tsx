@@ -89,7 +89,7 @@ const QuickActionCard = ({ icon: Icon, title, description, label: _label, onClic
 const DashboardPage = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
-    const { isAdmin, isPartner, isAssociate, isParalegal, hasFullAccess } = useRole();
+    const { isAdmin, isAssociate, isParalegal, hasFullAccess } = useRole();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [activity, setActivity] = useState<ActivityItem[]>([]);
     const [overview, setOverview] = useState<CaseOverview[]>([]);

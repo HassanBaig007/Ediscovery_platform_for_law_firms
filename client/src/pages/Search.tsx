@@ -1,9 +1,8 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useMemo, useEffect, useCallback, type CSSProperties } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useSearchStore } from '../store/searchStore';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { Separator } from '../components/ui/Separator';
 import { Search as SearchIcon, Filter, SlidersHorizontal, FileText, Loader2, ArrowLeft, Bookmark, Download, X, Plus, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import { AgGridReact } from 'ag-grid-react';
@@ -11,7 +10,6 @@ import { ColDef, ModuleRegistry, ClientSideRowModelModule, ValidationModule } fr
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/Dialog';
 import { useToastStore } from '../store/toastStore';
-import { Badge } from '../components/ui/Badge';
 import { useRole } from '../hooks/useRole';
 import PermissionDenied from '../components/ui/PermissionDenied';
 import { formatRelevanceStatus } from '../utils/formatters';
@@ -23,9 +21,11 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, ValidationModule]);
  * Extracted to avoid nested component warnings.
  */
 const TitleCellRenderer = (params: any) => (
-    <div className="flex items-center gap-2">
-        <FileText className="h-4 w-4 text-muted-foreground" />
-        <span className="font-medium text-foreground">{params.value}</span>
+    <div className="flex items-center gap-3 py-1">
+        <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground/60" />
+        <div className="min-w-0 flex-1">
+            <p className="truncate font-medium text-foreground">{params.value}</p>
+        </div>
     </div>
 );
 
@@ -42,6 +42,30 @@ const FILE_TYPE_LABELS: Record<string, string> = {
     txt: 'Text',
     csv: 'CSV'
 };
+
+const FILE_TYPE_OPTIONS = [
+    { ext: 'pdf', label: 'PDF' },
+    { ext: 'doc', label: 'Word' },
+    { ext: 'xls', label: 'Excel' },
+    { ext: 'ppt', label: 'PowerPoint' },
+    { ext: 'eml', label: 'Email' },
+    { ext: 'txt', label: 'Text' },
+    { ext: 'csv', label: 'CSV' }
+];
+
+const PRIVILEGE_OPTIONS = [
+    'NOT_PRIVILEGED',
+    'ATTORNEY_CLIENT',
+    'WORK_PRODUCT',
+    'NEEDS_REVIEW'
+];
+
+const RELEVANCE_OPTIONS = [
+    'HIGHLY_RELEVANT',
+    'RELEVANT',
+    'MARGINAL',
+    'NOT_RELEVANT'
+];
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
     year: 'numeric',
@@ -73,19 +97,19 @@ const RelevanceCellRenderer = (params: any) => {
     const value = String(params.value || 'NOT_RELEVANT');
     const label = formatRelevanceStatus(value);
 
-    const className =
-        value === 'HIGHLY_RELEVANT'
-            ? 'bg-success/15 text-success border-success/30'
-            : value === 'RELEVANT'
-                ? 'bg-primary/15 text-primary border-primary/30'
-                : value === 'MARGINAL'
-                    ? 'bg-warning/15 text-warning border-warning/30'
-                    : 'bg-muted text-muted-foreground border-border';
+    const statusConfig: Record<string, { bg: string; text: string }> = {
+        HIGHLY_RELEVANT: { bg: 'bg-emerald-100', text: 'text-emerald-900' },
+        RELEVANT: { bg: 'bg-blue-100', text: 'text-blue-900' },
+        MARGINAL: { bg: 'bg-amber-100', text: 'text-amber-900' },
+        NOT_RELEVANT: { bg: 'bg-slate-100', text: 'text-slate-800' },
+    };
+
+    const config = statusConfig[value] || statusConfig.NOT_RELEVANT;
 
     return (
-        <Badge variant="outline" className={className}>
+        <div className={`inline-flex items-center rounded-md px-2.5 py-1.5 font-semibold text-xs ${config.bg} ${config.text}`}>
             {label}
-        </Badge>
+        </div>
     );
 };
 
@@ -94,11 +118,16 @@ const FileTypeCellRenderer = (params: any) => {
     const normalized = rawValue.toLowerCase();
     const display = FILE_TYPE_LABELS[normalized] || rawValue.toUpperCase() || 'Unknown';
 
-    return <span className="font-medium text-foreground">{display}</span>;
+    return (
+        <div className="inline-flex items-center rounded-md bg-blue-100 px-2.5 py-1.5 font-semibold text-blue-900 text-xs">
+            {display}
+        </div>
+    );
 };
 
 const SearchPage = () => {
     const { id: caseId } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const { canReview, hasFullAccess } = useRole();
     const {
         results,
@@ -137,6 +166,23 @@ const SearchPage = () => {
     const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
     const [isAddingToProduction, setIsAddingToProduction] = useState(false);
     const { addToast } = useToastStore();
+
+    const selectedFileTypeLabels = useMemo(
+        () => FILE_TYPE_OPTIONS.filter(option => selectedFileTypes.includes(option.ext)).map(option => option.label),
+        [selectedFileTypes]
+    );
+
+    const activeFilterCount = useMemo(() => {
+        let count = 0;
+        if (query.trim()) count += 1;
+        if (dateFrom) count += 1;
+        if (dateTo) count += 1;
+        count += selectedFileTypes.length;
+        count += filters.privilegeStatuses?.length || 0;
+        count += filters.relevanceStatuses?.length || 0;
+        count += filters.custodianIds?.length || 0;
+        return count;
+    }, [dateFrom, dateTo, filters.custodianIds, filters.privilegeStatuses, filters.relevanceStatuses, query, selectedFileTypes.length]);
 
     useEffect(() => {
         if (!caseId) return;
@@ -216,10 +262,18 @@ const SearchPage = () => {
 
     const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (caseId && query.trim()) {
+        if (caseId) {
             setFilters({ filenameQuery: query });
             searchDocuments(caseId);
             setHasSearched(true);
+        }
+    };
+
+    const handleRowDoubleClick = (event: any) => {
+        const doc = event.data;
+        if (doc?.id || doc?._id) {
+            const docId = doc.id || doc._id;
+            navigate(`/cases/${caseId}/review?documentId=${docId}`);
         }
     };
 
@@ -268,53 +322,78 @@ const SearchPage = () => {
         {
             field: 'docNumber',
             headerName: 'Doc #',
-            width: 130,
-            valueFormatter: (params) => params.value || 'N/A'
+            width: 90,
+            valueFormatter: (params) => params.value || '—',
+            cellClass: 'text-muted-foreground text-sm font-medium',
         },
         {
             field: "filename",
             headerName: "Document",
-            flex: 2,
+            flex: 1,
+            minWidth: 250,
             cellRenderer: TitleCellRenderer,
             headerCheckboxSelection: true,
             checkboxSelection: true,
+            autoHeight: true,
         },
         {
             field: 'fileType',
             headerName: 'Type',
-            width: 130,
-            cellRenderer: FileTypeCellRenderer
+            width: 110,
+            cellRenderer: FileTypeCellRenderer,
+            cellClass: 'flex items-center justify-center',
         },
         {
             field: 'fileSize',
             headerName: 'Size',
-            width: 120,
-            valueFormatter: (params) => formatBytes(Number(params.value || 0))
+            width: 100,
+            valueFormatter: (params) => formatBytes(Number(params.value || 0)),
+            cellClass: 'text-right font-medium text-muted-foreground text-xs',
         },
-        { field: "custodianId.name", headerName: "Custodian", flex: 1 },
+        { 
+            field: "custodianId.name", 
+            headerName: "Custodian", 
+            flex: 0.8,
+            minWidth: 130,
+            cellClass: 'text-sm font-medium text-foreground',
+        },
         {
             field: "documentDate",
             headerName: "Date",
-            width: 140,
+            width: 120,
             valueFormatter: (params) => {
                 if (!params.value) {
-                    return 'N/A';
+                    return '—';
                 }
                 const date = new Date(params.value);
-                return Number.isNaN(date.getTime()) ? 'N/A' : dateFormatter.format(date);
-            }
+                return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
+            },
+            cellClass: 'text-center font-medium text-muted-foreground text-xs',
         },
         {
             field: 'coding.privilegeStatus',
             headerName: 'Privilege',
             width: 150,
-            valueFormatter: (params) => (params.value || 'NOT_PRIVILEGED').replaceAll('_', ' ')
+            cellRenderer: (params: any) => {
+                const value = String(params.value || 'NOT_PRIVILEGED');
+                const display = value.replace(/_/g, ' ');
+                const isPrivileged = value !== 'NOT_PRIVILEGED';
+                return (
+                    <div className={`inline-flex items-center rounded-md px-2.5 py-1.5 text-xs font-semibold ${
+                        isPrivileged 
+                            ? 'bg-amber-100 text-amber-900' 
+                            : 'bg-emerald-100 text-emerald-900'
+                    }`}>
+                        {display}
+                    </div>
+                );
+            },
         },
         {
             field: 'coding.relevanceStatus',
             headerName: 'Relevance',
-            width: 170,
-            cellRenderer: RelevanceCellRenderer
+            width: 150,
+            cellRenderer: RelevanceCellRenderer,
         }
     ], []);
 
@@ -380,64 +459,134 @@ const SearchPage = () => {
     const renderResultsArea = () => {
         if (isLoading) {
             return (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground animate-pulse">
-                    <SearchIcon className="h-12 w-12 mb-4 opacity-20" />
-                    <p>Searching vast oceans of data...</p>
+                <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[1.5rem] border border-border/60 bg-card/80 text-muted-foreground shadow-sm">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                    <p className="mt-4 text-sm font-medium text-foreground">Searching case data</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Refining documents, metadata, and text matches.</p>
                 </div>
             );
         }
 
         if (results && results.length > 0) {
             return (
-                <div className="flex flex-col h-full space-y-4">
-                    <div className="flex justify-between items-end">
-                        <div>
-                            <h2 className="text-lg font-semibold text-foreground">Results</h2>
-                            <p className="text-sm text-muted-foreground">
-                                Found {numberFormatter.format(total || results.length)} documents
-                                {query ? ` matching "${query}"` : ''}
-                            </p>
-                        </div>
-                        <div className="flex gap-2">
-                            {selectedDocIds.length > 0 && (
-                                <Button variant="secondary" size="sm" onClick={openProductionModal} className="bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary">
-                                    <Plus className="mr-2 h-3.5 w-3.5" />
-                                    Add to Production ({selectedDocIds.length})
+                <div className="flex h-full min-h-0 flex-col gap-3">
+                    <div className="page-surface rounded-[1.5rem] px-5 py-4 shadow-sm md:px-6 md:py-5">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="max-w-3xl space-y-2">
+                                <p className="text-section-title">Search Results</p>
+                                <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                                    Found {numberFormatter.format(total || results.length)} documents
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    {query
+                                        ? `Matching “${query}” across the current case with ${activeFilterCount} active filter${activeFilterCount === 1 ? '' : 's'}.`
+                                        : `Showing ${numberFormatter.format(total || results.length)} documents from the current search filters.`}
+                                </p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {selectedDocIds.length > 0 && (
+                                    <Button variant="secondary" size="sm" onClick={openProductionModal} className="bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary">
+                                        <Plus className="mr-2 h-3.5 w-3.5" />
+                                        Add to Production ({selectedDocIds.length})
+                                    </Button>
+                                )}
+                                <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
+                                    {isExporting ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-2 h-3.5 w-3.5" />}
+                                    Export CSV
                                 </Button>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {query && (
+                                <span className="inline-flex items-center rounded-full border border-border/70 bg-muted px-3 py-1 text-xs font-medium text-foreground">
+                                    Query: {query}
+                                </span>
                             )}
-                            <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
-                                {isExporting ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-2 h-3.5 w-3.5" />}
-                                Export CSV
-                            </Button>
+                            {activeFilterCount > 0 && (
+                                <span className="inline-flex items-center rounded-full border border-border/70 bg-muted px-3 py-1 text-xs font-medium text-foreground">
+                                    {activeFilterCount} active filter{activeFilterCount === 1 ? '' : 's'}
+                                </span>
+                            )}
+                            {selectedDocIds.length > 0 && (
+                                <span className="inline-flex items-center rounded-full border border-border/70 bg-muted px-3 py-1 text-xs font-medium text-foreground">
+                                    {selectedDocIds.length} selected
+                                </span>
+                            )}
+                            {selectedFileTypeLabels.length > 0 && (
+                                <span className="inline-flex items-center rounded-full border border-border/70 bg-muted px-3 py-1 text-xs font-medium text-foreground">
+                                    {selectedFileTypeLabels.join(', ')}
+                                </span>
+                            )}
                         </div>
                     </div>
 
-                    <div className="bg-card rounded-xl border border-border shadow-sm flex-1 overflow-hidden ag-theme-quartz">
-                        <AgGridReact
-                            rowData={results}
-                            columnDefs={colDefs}
-                            defaultColDef={{
-                                sortable: true,
-                                filter: true,
-                                resizable: true
-                            }}
-                            pagination={true}
-                            paginationPageSize={25}
-                            rowSelection="multiple"
-                            onSelectionChanged={handleSelectionChanged}
-                        />
+                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-border/70 bg-card shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+                        <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-muted/35 px-4 py-3">
+                            <div>
+                                <h3 className="text-sm font-semibold text-foreground">Document list</h3>
+                                <p className="text-xs text-muted-foreground">Double-click a document to open review. Use checkboxes for batch actions.</p>
+                            </div>
+                            <div className="hidden rounded-full bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm sm:block">
+                                {numberFormatter.format(results.length)} results on page
+                            </div>
+                        </div>
+
+                        <div
+                            className="search-results-grid ag-theme-quartz flex-1 min-h-0 overflow-hidden"
+                            style={{
+                                '--ag-header-height': '44px',
+                                '--ag-row-height': '50px',
+                                '--ag-font-size': '13px',
+                            } as CSSProperties}
+                        >
+                            <AgGridReact
+                                rowData={results}
+                                columnDefs={colDefs}
+                                defaultColDef={{
+                                    sortable: true,
+                                    filter: true,
+                                    resizable: true
+                                }}
+                                className="h-full w-full"
+                                headerHeight={44}
+                                rowHeight={50}
+                                animateRows={true}
+                                suppressNoRowsOverlay={true}
+                                pagination={true}
+                                paginationPageSize={20}
+                                rowSelection="multiple"
+                                onSelectionChanged={handleSelectionChanged}
+                                onRowDoubleClicked={handleRowDoubleClick}
+                            />
+                        </div>
                     </div>
                 </div>
             );
         }
 
         return (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <div className="bg-muted p-6 rounded-full mb-4">
-                    <SearchIcon className="h-8 w-8 text-muted-foreground/40" />
+            <div className="flex min-h-[420px] items-center justify-center rounded-[1.5rem] border border-border/60 bg-card/80 px-4 text-center shadow-sm">
+                <div className="w-full max-w-xl space-y-3 py-8">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <SearchIcon className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-base font-semibold text-foreground">No matching documents</h3>
+                        <p className="text-sm text-muted-foreground">
+                            {query
+                                ? `Nothing matched “${query}” with the current filters.`
+                                : 'Try broadening the filters or searching by filename, custodian, or relevance.'}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+                        {query && <span className="rounded-full bg-muted px-2.5 py-1">Query: {query}</span>}
+                        {activeFilterCount > 0 && <span className="rounded-full bg-muted px-2.5 py-1">{activeFilterCount} active filter{activeFilterCount === 1 ? '' : 's'}</span>}
+                        {selectedFileTypeLabels.length > 0 && <span className="rounded-full bg-muted px-2.5 py-1">{selectedFileTypeLabels.join(', ')}</span>}
+                    </div>
                 </div>
-                <h3 className="text-lg font-medium text-foreground">No results found</h3>
-                <p className="max-w-xs text-center mt-2">Try adjusting your search terms or filters to find what you're looking for.</p>
             </div>
         );
     };
@@ -449,222 +598,225 @@ const SearchPage = () => {
             animate={{ opacity: 1 }}
             className="flex-1 flex flex-col overflow-hidden"
         >
-            {/* Compact Header Search Bar */}
-            <div className="bg-card border-b border-border p-4 flex flex-col gap-4 shadow-sm z-10">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => setHasSearched(false)}>
+            <div className="sticky top-0 z-10 border-b border-border/50 bg-card/95 px-4 py-4 shadow-sm backdrop-blur-sm">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <Button variant="ghost" size="icon" onClick={() => setHasSearched(false)} className="hover:bg-muted/80">
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
-                    <h1 className="text-xl font-semibold text-foreground">Search Results</h1>
+                        <div className="space-y-0.5">
+                            <h1 className="text-lg font-bold text-foreground">Search Results</h1>
+                            <p className="text-xs text-muted-foreground/80">Refine your search or review documents below. Use filters to narrow results.</p>
+                        </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className={showFilters ? 'bg-muted' : ''}>
+                    <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className={`transition-colors ${showFilters ? 'bg-blue-100 text-blue-900 border-blue-300/60 hover:bg-blue-200' : 'hover:bg-muted'}`}>
                         <SlidersHorizontal className="mr-2 h-4 w-4" />
                         {showFilters ? 'Hide Filters' : 'Show Filters'}
                     </Button>
                 </div>
 
-                <form onSubmit={handleSearch} className="flex gap-2 max-w-4xl mx-auto w-full">
+                <form onSubmit={handleSearch} className="mt-4 flex w-full gap-2">
                     <div className="relative flex-1">
-                        <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground/70" />
                         <Input
                             placeholder="Search for keywords, phrases, or metadata..."
-                            className="pl-10 h-10 text-base shadow-sm"
+                            className="h-10 pl-10 pr-4 text-sm font-medium shadow-sm border-border/60 focus:border-primary focus:ring-2 focus:ring-primary/30"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                         />
                     </div>
-                    <Button type="submit" size="lg" disabled={isLoading} className="px-8 bg-primary hover:bg-primary/90 h-10 text-base font-semibold">
+                    <Button type="submit" size="lg" disabled={isLoading} className="h-10 bg-primary px-7 text-sm font-bold text-white hover:bg-primary/90 transition-colors shadow-sm">
                         {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
                     </Button>
                 </form>
             </div>
 
-            {/* Main Content Area */}
-            <div className="flex flex-1 overflow-hidden">
-                {/* Filters Sidebar */}
+            <div className="flex flex-1 min-h-0 overflow-hidden">
                 {showFilters && (
-                    <aside className="w-80 bg-muted border-r border-border overflow-y-auto p-4 space-y-6">
-                        <div className="flex items-center gap-2 font-semibold text-foreground pb-2 border-b border-border">
-                            <Filter className="h-4 w-4" /> Filters
-                        </div>
-
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-foreground">File Type</h3>
-                            <div className="space-y-1.5">
-                                {Object.entries(FILE_TYPE_LABELS).filter(([k], i, arr) =>
-                                    arr.findIndex(([, v]) => v === FILE_TYPE_LABELS[k]) === i
-                                ).map(([ext, label]) => (
-                                    <label key={ext} className="flex items-center space-x-2 text-sm text-muted-foreground cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-border text-primary focus:ring-primary"
-                                            checked={selectedFileTypes.includes(ext)}
-                                            onChange={() => toggleFileType(ext)}
-                                        />
-                                        <span>{label} (.{ext})</span>
-                                    </label>
-                                ))}
+                    <aside className="w-80 shrink-0 overflow-y-auto border-r border-border/50 bg-card p-4 shadow-[inset_-1px_0_0_rgba(148,163,184,0.08)]">
+                        <div className="mb-6 flex items-center justify-between gap-2 border-b border-border/40 pb-4">
+                            <div className="flex items-center gap-2.5 font-semibold text-foreground text-sm">
+                                <Filter className="h-4 w-4 text-primary" /> Filters
                             </div>
+                            {activeFilterCount > 0 && (
+                                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-900">
+                                    {activeFilterCount} active
+                                </span>
+                            )}
                         </div>
 
-                        <Separator className="my-4" />
-
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-foreground">Date Range</h3>
-                            <div className="space-y-2">
-                                <div>
-                                    <label htmlFor="search-date-from" className="text-xs text-muted-foreground">From</label>
-                                    <input
-                                        id="search-date-from"
-                                        type="date"
-                                        value={dateFrom}
-                                        onChange={e => { setDateFrom(e.target.value); setFilters({ dateFrom: e.target.value } as any); }}
-                                        className="w-full mt-1 px-2 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="search-date-to" className="text-xs text-muted-foreground">To</label>
-                                    <input
-                                        id="search-date-to"
-                                        type="date"
-                                        value={dateTo}
-                                        onChange={e => { setDateTo(e.target.value); setFilters({ dateTo: e.target.value } as any); }}
-                                        className="w-full mt-1 px-2 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <Separator className="my-4" />
-
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-foreground">Privilege Status</h3>
-                            <div className="space-y-1.5">
-                                {['NOT_PRIVILEGED', 'ATTORNEY_CLIENT', 'WORK_PRODUCT', 'NEEDS_REVIEW'].map(s => (
-                                    <label key={s} className="flex items-center space-x-2 text-sm text-muted-foreground cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-border text-primary focus:ring-primary"
-                                            checked={filters.privilegeStatuses?.includes(s as any) ?? false}
-                                            onChange={() => togglePrivilege(s)}
-                                        />
-                                        <span>{s.replace(/_/g, ' ')}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        <Separator className="my-4" />
-
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-foreground">Relevance</h3>
-                            <div className="space-y-1.5">
-                                {['HIGHLY_RELEVANT', 'RELEVANT', 'MARGINAL', 'NOT_RELEVANT'].map(s => (
-                                    <label key={s} className="flex items-center space-x-2 text-sm text-muted-foreground cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-border text-primary focus:ring-primary"
-                                            checked={filters.relevanceStatuses?.includes(s as any) ?? false}
-                                            onChange={() => toggleRelevance(s)}
-                                        />
-                                        <span>{s.replace(/_/g, ' ')}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        <Separator className="my-4" />
-
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-foreground">Custodian</h3>
-                            <div className="space-y-2">
-                                {custodians.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground italic">No custodians found.</p>
-                                ) : custodians.map(c => (
-                                    <label key={c._id} className="flex items-center space-x-2 text-sm text-muted-foreground cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-border text-primary focus:ring-primary"
-                                            checked={filters.custodianIds?.includes(c._id) ?? false}
-                                            onChange={() => toggleCustodian(c._id)}
-                                        />
-                                        <span>{c.name}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        <Separator className="my-4" />
-
-                        {/* Saved Searches */}
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                                <Bookmark className="h-3.5 w-3.5" /> Saved Searches
-                            </h3>
-                            {savedSearches.length === 0 ? (
-                                <p className="text-xs text-muted-foreground italic">No saved searches yet.</p>
-                            ) : (
-                                <div className="space-y-1.5">
-                                    {savedSearches.map(s => (
-                                        <div key={s.id} className="flex items-center gap-1 group justify-between">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleLoadSavedSearch(s)}
-                                                className="flex-1 text-left text-xs text-primary hover:underline truncate"
-                                                title={s.searchName}
-                                            >
-                                                {s.searchName}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    deleteSavedSearch(s.id);
-                                                }}
-                                                className="opacity-0 group-hover:opacity-100 p-1 text-destructive hover:bg-destructive/10 rounded transition-all"
-                                                title="Delete saved search"
-                                            >
-                                                <Trash2 className="h-3 w-3" />
-                                            </button>
-                                        </div>
+                        <div className="space-y-5">
+                            {/* File Type Filter */}
+                            <div className="space-y-3 rounded-xl border border-blue-200/40 bg-blue-50/25 p-4">
+                                <h3 className="text-xs font-bold uppercase tracking-wide text-blue-900/80">File Type</h3>
+                                <div className="space-y-2.5">
+                                    {FILE_TYPE_OPTIONS.map(({ ext, label }) => (
+                                        <label key={ext} className="flex cursor-pointer items-center space-x-2.5 text-sm text-foreground/85 transition-colors hover:text-foreground">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-border/60 text-blue-600 focus:ring-2 focus:ring-blue-500/50"
+                                                checked={selectedFileTypes.includes(ext)}
+                                                onChange={() => toggleFileType(ext)}
+                                            />
+                                            <span className="font-medium">{label}</span>
+                                            <span className="text-xs text-muted-foreground/70">(.{ext})</span>
+                                        </label>
                                     ))}
                                 </div>
-                            )}
+                            </div>
 
-                            {showSaveName ? (
-                                <div className="flex gap-1.5 mt-2">
-                                    <input
-                                        type="text"
-                                        value={saveSearchName}
-                                        onChange={e => setSaveSearchName(e.target.value)}
-                                        placeholder="Search name..."
-                                        className="flex-1 text-xs border border-input rounded px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                                        onKeyDown={e => { if (e.key === 'Enter') handleSaveSearch(); }}
-                                        autoFocus
-                                    />
-                                    <button type="button" onClick={handleSaveSearch} disabled={isSavingSearch} className="text-xs text-primary font-medium disabled:opacity-50">
-                                        {isSavingSearch ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-                                    </button>
-                                    <button type="button" onClick={() => setShowSaveName(false)} className="text-muted-foreground">
-                                        <X className="h-3 w-3" />
-                                    </button>
+                            {/* Date Range Filter */}
+                            <div className="space-y-3 rounded-xl border border-purple-200/40 bg-purple-50/25 p-4">
+                                <h3 className="text-xs font-bold uppercase tracking-wide text-purple-900/80">Date Range</h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label htmlFor="search-date-from" className="text-xs font-semibold text-foreground/85">From</label>
+                                        <input
+                                            id="search-date-from"
+                                            type="date"
+                                            value={dateFrom}
+                                            onChange={e => { setDateFrom(e.target.value); setFilters({ dateFrom: e.target.value } as any); }}
+                                            className="mt-1.5 w-full rounded-md border border-border/60 bg-white px-3 py-2 text-sm font-medium text-foreground focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="search-date-to" className="text-xs font-semibold text-foreground/85">To</label>
+                                        <input
+                                            id="search-date-to"
+                                            type="date"
+                                            value={dateTo}
+                                            onChange={e => { setDateTo(e.target.value); setFilters({ dateTo: e.target.value } as any); }}
+                                            className="mt-1.5 w-full rounded-md border border-border/60 bg-white px-3 py-2 text-sm font-medium text-foreground focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                                        />
+                                    </div>
                                 </div>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowSaveName(true)}
-                                    className="text-xs text-primary hover:underline mt-1"
-                                >
-                                    + Save current search
-                                </button>
-                            )}
+                            </div>
+
+                            {/* Privilege Status Filter */}
+                            <div className="space-y-3 rounded-xl border border-amber-200/40 bg-amber-50/25 p-4">
+                                <h3 className="text-xs font-bold uppercase tracking-wide text-amber-900/80">Privilege Status</h3>
+                                <div className="space-y-2.5">
+                                    {PRIVILEGE_OPTIONS.map(s => (
+                                        <label key={s} className="flex cursor-pointer items-center space-x-2.5 text-sm text-foreground/85 transition-colors hover:text-foreground">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-border/60 text-amber-600 focus:ring-2 focus:ring-amber-500/50"
+                                                checked={filters.privilegeStatuses?.includes(s as any) ?? false}
+                                                onChange={() => togglePrivilege(s)}
+                                            />
+                                            <span className="font-medium">{s.replace(/_/g, ' ')}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Relevance Filter */}
+                            <div className="space-y-3 rounded-xl border border-emerald-200/40 bg-emerald-50/25 p-4">
+                                <h3 className="text-xs font-bold uppercase tracking-wide text-emerald-900/80">Relevance</h3>
+                                <div className="space-y-2.5">
+                                    {RELEVANCE_OPTIONS.map(s => (
+                                        <label key={s} className="flex cursor-pointer items-center space-x-2.5 text-sm text-foreground/85 transition-colors hover:text-foreground">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-border/60 text-emerald-600 focus:ring-2 focus:ring-emerald-500/50"
+                                                checked={filters.relevanceStatuses?.includes(s as any) ?? false}
+                                                onChange={() => toggleRelevance(s)}
+                                            />
+                                            <span className="font-medium">{s.replace(/_/g, ' ')}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Custodian Filter */}
+                            <div className="space-y-3 rounded-xl border border-slate-200/40 bg-slate-50/25 p-4">
+                                <h3 className="text-xs font-bold uppercase tracking-wide text-slate-900/80">Custodian</h3>
+                                <div className="space-y-2.5">
+                                    {custodians.length === 0 ? (
+                                        <p className="text-xs italic text-muted-foreground/70">No custodians found.</p>
+                                    ) : custodians.map(c => (
+                                        <label key={c._id} className="flex cursor-pointer items-center space-x-2.5 text-sm text-foreground/85 transition-colors hover:text-foreground">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-border/60 text-slate-600 focus:ring-2 focus:ring-slate-500/50"
+                                                checked={filters.custodianIds?.includes(c._id) ?? false}
+                                                onChange={() => toggleCustodian(c._id)}
+                                            />
+                                            <span className="font-medium">{c.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Saved Searches */}
+                            <div className="space-y-3 rounded-xl border border-indigo-200/40 bg-indigo-50/25 p-4">
+                                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-indigo-900/80">
+                                    <Bookmark className="h-3.5 w-3.5" /> Saved Searches
+                                </h3>
+                                {savedSearches.length === 0 ? (
+                                    <p className="text-xs italic text-muted-foreground/70">No saved searches yet.</p>
+                                ) : (
+                                    <div className="space-y-1.5">
+                                        {savedSearches.map(s => (
+                                            <div key={s.id} className="group flex items-center justify-between gap-2 rounded-lg border border-transparent bg-white/40 px-2.5 py-1.5 transition-all hover:border-indigo-200/60 hover:bg-white/70">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleLoadSavedSearch(s)}
+                                                    className="flex-1 truncate text-left text-xs font-medium text-indigo-700 hover:text-indigo-900"
+                                                    title={s.searchName}
+                                                >
+                                                    {s.searchName}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        deleteSavedSearch(s.id);
+                                                    }}
+                                                    className="rounded p-0.5 text-slate-400 opacity-0 transition-all hover:bg-red-100 hover:text-red-600 group-hover:opacity-100"
+                                                    title="Delete saved search"
+                                                    aria-label="Delete saved search"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {showSaveName ? (
+                                    <div className="mt-3 flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={saveSearchName}
+                                            onChange={e => setSaveSearchName(e.target.value)}
+                                            placeholder="Search name..."
+                                            className="flex-1 rounded border border-border/60 bg-white px-2.5 py-1.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                                            onKeyDown={e => { if (e.key === 'Enter') handleSaveSearch(); }}
+                                            autoFocus
+                                        />
+                                        <button type="button" onClick={handleSaveSearch} disabled={isSavingSearch} className="text-xs font-bold text-indigo-700 hover:text-indigo-900 disabled:opacity-50">
+                                            {isSavingSearch ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
+                                        </button>
+                                        <button type="button" onClick={() => setShowSaveName(false)} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600">
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSaveName(true)}
+                                        className="text-xs font-bold text-indigo-700 hover:text-indigo-900"
+                                    >
+                                        + Save current search
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </aside>
                 )}
 
-                {/* Results Area */}
-                <main className="flex-1 p-6 overflow-hidden flex flex-col">
+                <main className="flex flex-1 min-h-0 flex-col overflow-hidden p-4">
                     {renderResultsArea()}
                 </main>
             </div>

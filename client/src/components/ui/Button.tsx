@@ -27,10 +27,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     }
 
     const sizes = {
-      default: "h-10 px-4 py-2 rounded-lg",
-      sm: "h-9 rounded-lg px-3 text-[13px]",
-      lg: "h-11 rounded-lg px-6",
-      icon: "h-9 w-9 rounded-lg",
+      default: "h-11 px-4 py-2 rounded-lg",
+      sm: "h-10 rounded-lg px-3 text-sm",
+      lg: "h-12 rounded-lg px-6 text-base",
+      icon: "h-10 w-10 rounded-lg",
     }
 
     return (
@@ -39,7 +39,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           "inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background disabled:pointer-events-none disabled:opacity-50",
           "transition-[transform,background-color,color,border-color] duration-150 ease-out",
           "active:translate-y-[1px]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-1",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2",
           variants[variant],
           sizes[size],
           className

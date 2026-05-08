@@ -11,6 +11,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { cn } from '../../lib/utils';
 import api from '../../services/api';
+import { NOTIFICATIONS_UPDATED_EVENT } from '../../lib/notificationEvents';
 
 const getBreadcrumbs = (pathname: string) => {
   const paths = pathname.split('/').filter(Boolean);
@@ -148,9 +149,23 @@ useEffect(() => {
       }
     };
 
+    const handleNotificationsUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<number>;
+      if (typeof customEvent.detail === 'number') {
+        setUnreadCount(customEvent.detail);
+      } else {
+        void fetchUnreadCount();
+      }
+    };
+
     fetchUnreadCount();
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, handleNotificationsUpdated);
     const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds
-    return () => clearInterval(interval);
+
+    return () => {
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, handleNotificationsUpdated);
+      clearInterval(interval);
+    };
   }, [user]);
 
   return (
@@ -182,7 +197,7 @@ useEffect(() => {
                 <ChevronRight className="h-3 w-3 text-muted-foreground/40 mx-1 shrink-0" />
               )}
               {index === breadcrumbs.length - 1 ? (
-                <span className="flex items-center text-foreground font-medium truncate text-sm" aria-current="page">
+                <span className="flex items-center text-foreground font-semibold truncate text-sm" aria-current="page">
                   {item.icon && <item.icon className="h-3.5 w-3.5 mr-1.5 shrink-0 text-primary" />}
                   {item.label}
                 </span>
@@ -211,7 +226,7 @@ useEffect(() => {
               type="text"
               placeholder="Search cases, documents..."
               className={cn(
-                "w-full h-9 pl-9 pr-3 rounded-lg text-sm",
+                "w-full h-10 pl-10 pr-3 rounded-lg text-sm",
                 "bg-secondary/80 border border-border/60 text-foreground placeholder:text-muted-foreground/60",
                 "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40",
                 "transition-all"
@@ -224,7 +239,7 @@ useEffect(() => {
           <button
             onClick={() => setSearchOpen(true)}
             className={cn(
-              "flex items-center gap-2 h-9 w-full px-3 rounded-lg text-sm",
+              "flex items-center gap-2 h-10 w-full px-3 rounded-lg text-sm",
               "bg-secondary/60 border border-border/40 text-muted-foreground/60",
               "hover:bg-secondary/80 hover:border-border/60 hover:text-muted-foreground",
               "transition-all cursor-pointer"
@@ -232,7 +247,7 @@ useEffect(() => {
           >
             <Search className="h-3.5 w-3.5" />
             <span className="flex-1 text-left text-sm">Search...</span>
-            <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-muted/60 text-[10px] font-medium text-muted-foreground/70 border border-border/40">
+            <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-muted/60 text-xs font-medium text-muted-foreground/80 border border-border/40">
               <Command className="h-2.5 w-2.5" />K
             </kbd>
           </button>

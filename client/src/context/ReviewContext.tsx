@@ -97,12 +97,12 @@ export const ReviewProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         try {
             const docId = state.currentDocument.id; // Use .id from frontend transform or check ._id
-
+            
             // Push current to history before moving
             dispatch({ type: 'PUSH_HISTORY', payload: docId });
-
+            
             const res = await api.post(`/documents/${docId}/code`, data);
-
+            
             // Backend returns nextDocument
             if (res.data.nextDocument) {
                 dispatch({ type: 'SET_DOCUMENT', payload: res.data.nextDocument });
@@ -113,6 +113,11 @@ export const ReviewProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 } else {
                     fetchNextDocument();
                 }
+            }
+            
+            // Notify other components to refresh analytics
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('coding-submitted'));
             }
         } catch (error: unknown) {
             console.error('Coding failed', error);

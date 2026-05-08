@@ -52,6 +52,7 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
 export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, password } = req.body;
+        
         const user = await User.findOne({ email }).select('+passwordHash');
 
         if (user) {

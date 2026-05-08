@@ -5,6 +5,15 @@ const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
+// Auth endpoints that should NEVER trigger the token-refresh interceptor.
+// A 401 from these routes means "wrong credentials", not "expired token".
+const AUTH_ROUTES = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password'];
+
+const isAuthRoute = (url?: string): boolean => {
+    if (!url) return false;
+    return AUTH_ROUTES.some((route) => url.endsWith(route));
+};
+
 // Track if we're already trying to refresh the token
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -25,9 +34,13 @@ const processQueue = (error: unknown, token: string | null = null) => {
 
 api.interceptors.request.use(
     (config) => {
-        const token = useAuthStore.getState().accessToken;
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        // Don't attach Bearer tokens to public auth routes — they don't need
+        // them and a stale token from a previous session can confuse the flow.
+        if (!isAuthRoute(config.url)) {
+            const token = useAuthStore.getState().accessToken;
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
         }
         return config;
     },
@@ -42,6 +55,12 @@ api.interceptors.response.use(
     },
     async (error) => {
         const originalRequest = error.config;
+
+        // NEVER try to refresh tokens for auth endpoints.
+        // A 401 here means "wrong credentials" — pass the error straight through.
+        if (isAuthRoute(originalRequest?.url)) {
+            return Promise.reject(error);
+        }
 
         // If 401 and we haven't tried to refresh yet
         if (error.response?.status === 401 && !originalRequest._retry) {
