@@ -10,6 +10,7 @@ import {
     ArrowLeft, Search, FileText, Settings,
     Clock, Database, Upload, BarChart3, Activity,
     Plus, CheckCircle2, Loader2, ExternalLink, Users,
+    FileSpreadsheet, FileImage, Mail, Archive, FileCode, File,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -447,16 +448,19 @@ const CaseDetail = () => {
                         </div>
 
                         {/* Document list */}
-                        <Card>
+                        <Card className="overflow-hidden border border-border/60 shadow-sm">
                             {docsLoading ? (
-                                <div className="flex justify-center py-12">
-                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                                    <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                                    <p className="text-sm text-muted-foreground">Loading documents…</p>
                                 </div>
                             ) : documents.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                                    <FileText className="h-12 w-12 text-muted-foreground/25 mb-3" />
-                                    <p className="font-medium text-foreground">No documents yet</p>
-                                    <p className="text-sm text-muted-foreground mt-1 mb-4">Upload documents to start the review process.</p>
+                                    <div className="p-4 rounded-full bg-muted mb-4">
+                                        <FileText className="h-8 w-8 text-muted-foreground/40" />
+                                    </div>
+                                    <p className="font-semibold text-foreground">No documents yet</p>
+                                    <p className="text-sm text-muted-foreground mt-1 mb-5">Upload documents to start the review process.</p>
                                     {canUploadToCase && (
                                         <Button size="sm" onClick={() => navigate(`/cases/${id}/upload`)} className="gap-1.5">
                                             <Upload className="h-3.5 w-3.5" /> Upload Documents
@@ -467,39 +471,72 @@ const CaseDetail = () => {
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm">
                                         <thead>
-                                            <tr className="border-b border-border/60 bg-muted/30">
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Doc #</th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Filename</th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Type</th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Custodian</th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Size</th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                                            <tr className="border-b border-border bg-muted/50">
+                                                <th className="px-4 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-widest w-[110px]">Doc #</th>
+                                                <th className="px-4 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">File</th>
+                                                <th className="px-4 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-widest hidden lg:table-cell w-[110px]">Type</th>
+                                                <th className="px-4 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-widest hidden md:table-cell w-[140px]">Custodian</th>
+                                                <th className="px-4 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-widest hidden sm:table-cell w-[90px]">Size</th>
+                                                <th className="px-4 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-widest w-[110px]">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border/40">
                                             {documents.map((doc, idx) => {
                                                 const docId = doc.id || doc._id;
                                                 const custodianName = typeof doc.custodianId === 'object' && doc.custodianId?.name
-                                                    ? doc.custodianId.name
-                                                    : '—';
-                                                // Determine review status based on coding data
+                                                    ? doc.custodianId.name : '—';
                                                 const coding: any = doc.coding;
-                                                // Consider a document reviewed only when a reviewer has saved coding (reviewedAt exists)
                                                 const isReviewed = Boolean(coding?.reviewedAt);
-                                                const reviewStatus = isReviewed ? 'REVIEWED' : 'PENDING';
-                                                const sizeMB = doc.fileSize ? (doc.fileSize / 1024 / 1024).toFixed(2) + ' MB' : '—';
+                                                const isPrivileged = coding?.privilegeStatus &&
+                                                    coding.privilegeStatus !== 'NOT_PRIVILEGED' &&
+                                                    coding.privilegeStatus !== 'NEEDS_REVIEW';
+                                                const sizeLabel = doc.fileSize
+                                                    ? doc.fileSize < 1024 * 1024
+                                                        ? (doc.fileSize / 1024).toFixed(0) + ' KB'
+                                                        : (doc.fileSize / 1024 / 1024).toFixed(2) + ' MB'
+                                                    : '—';
+
+                                                const ft = (doc.fileType || '').toLowerCase();
+                                                const getFileIcon = () => {
+                                                    if (ft.includes('pdf')) return <FileText className="h-4 w-4 text-red-500" />;
+                                                    if (ft.includes('wordprocessingml') || ft.includes('msword')) return <FileText className="h-4 w-4 text-blue-500" />;
+                                                    if (ft.includes('spreadsheetml') || ft.includes('excel') || ft.includes('csv')) return <FileSpreadsheet className="h-4 w-4 text-green-500" />;
+                                                    if (ft.includes('image') || ft.includes('jpeg') || ft.includes('png') || ft.includes('gif') || ft.includes('tiff')) return <FileImage className="h-4 w-4 text-purple-500" />;
+                                                    if (ft.includes('rfc822') || ft.includes('outlook')) return <Mail className="h-4 w-4 text-orange-500" />;
+                                                    if (ft.includes('zip') || ft.includes('archive')) return <Archive className="h-4 w-4 text-yellow-600" />;
+                                                    if (ft.includes('plain') || ft.includes('html') || ft.includes('json') || ft.includes('xml')) return <FileCode className="h-4 w-4 text-slate-500" />;
+                                                    return <File className="h-4 w-4 text-muted-foreground" />;
+                                                };
+                                                const getFriendlyType = () => {
+                                                    if (ft.includes('pdf')) return 'PDF';
+                                                    if (ft.includes('wordprocessingml') || ft.includes('msword')) return 'Word';
+                                                    if (ft.includes('spreadsheetml') || ft.includes('excel')) return 'Excel';
+                                                    if (ft.includes('presentationml') || ft.includes('powerpoint')) return 'PowerPoint';
+                                                    if (ft.includes('plain')) return 'Text';
+                                                    if (ft.includes('html')) return 'HTML';
+                                                    if (ft.includes('csv')) return 'CSV';
+                                                    if (ft.includes('jpeg') || ft.includes('jpg')) return 'JPEG';
+                                                    if (ft.includes('png')) return 'PNG';
+                                                    if (ft.includes('tiff')) return 'TIFF';
+                                                    if (ft.includes('gif')) return 'GIF';
+                                                    if (ft.includes('rfc822') || ft.includes('outlook')) return 'Email';
+                                                    if (ft.includes('zip')) return 'ZIP';
+                                                    if (ft.includes('json')) return 'JSON';
+                                                    if (ft.includes('xml')) return 'XML';
+                                                    return doc.fileType || '—';
+                                                };
+
                                                 return (
                                                     <tr
                                                         key={docId ?? idx}
-                                                        className="hover:bg-muted/40 transition-colors cursor-pointer"
+                                                        className="group hover:bg-primary/[0.03] transition-colors cursor-pointer"
                                                         onClick={async () => {
                                                             if (!docId) return;
                                                             setIsDocPreviewOpen(true);
                                                             setIsDocPreviewLoading(true);
                                                             try {
                                                                 const response = await api.get(`/documents/${docId}`);
-                                                                const fullDoc = response.data || {};
-                                                                setPreviewDoc(fullDoc);
+                                                                setPreviewDoc(response.data || {});
                                                             } catch (error) {
                                                                 console.error('Failed to load document details', error);
                                                                 setPreviewDoc({ id: String(docId), filename: doc.filename, fileType: doc.fileType, coding: doc.coding });
@@ -508,16 +545,72 @@ const CaseDetail = () => {
                                                             }
                                                         }}
                                                     >
-                                                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{doc.docNumber}</td>
-                                                        <td className="px-4 py-3 font-medium text-foreground max-w-[200px] truncate">{doc.filename}</td>
-                                                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell uppercase text-xs">{doc.fileType || '—'}</td>
-                                                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{custodianName}</td>
-                                                        <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{sizeMB}</td>
-                                                        <td className="px-4 py-3">
-                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
-                                                                reviewStatus === 'REVIEWED' ? 'bg-success/12 text-success' : 'bg-warning/12 text-warning'
+                                                        {/* Doc # */}
+                                                        <td className="px-4 py-3.5">
+                                                            <span className="font-mono text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                                                {doc.docNumber}
+                                                            </span>
+                                                        </td>
+
+                                                        {/* File */}
+                                                        <td className="px-4 py-3.5">
+                                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                                <div className="shrink-0 p-1.5 rounded-md bg-muted group-hover:bg-background transition-colors">
+                                                                    {getFileIcon()}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="font-medium text-foreground truncate max-w-[220px] text-sm leading-snug">
+                                                                        {doc.filename}
+                                                                    </p>
+                                                                    <p className="text-[11px] text-muted-foreground mt-0.5 lg:hidden">
+                                                                        {getFriendlyType()}
+                                                                    </p>
+                                                                </div>
+                                                                {isPrivileged && (
+                                                                    <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-destructive/10 text-destructive border border-destructive/20">
+                                                                        Privileged
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Type */}
+                                                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                                                            <span className="text-xs text-muted-foreground font-medium">
+                                                                {getFriendlyType()}
+                                                            </span>
+                                                        </td>
+
+                                                        {/* Custodian */}
+                                                        <td className="px-4 py-3.5 hidden md:table-cell">
+                                                            {custodianName !== '—' ? (
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                                        <span className="text-[9px] font-bold text-primary uppercase">
+                                                                            {custodianName.charAt(0)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="text-sm text-foreground truncate max-w-[100px]">{custodianName}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-muted-foreground/50 text-xs">—</span>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Size */}
+                                                        <td className="px-4 py-3.5 hidden sm:table-cell">
+                                                            <span className="text-xs text-muted-foreground tabular-nums">{sizeLabel}</span>
+                                                        </td>
+
+                                                        {/* Status */}
+                                                        <td className="px-4 py-3.5">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide border ${
+                                                                isReviewed
+                                                                    ? 'bg-success/10 text-success border-success/20'
+                                                                    : 'bg-warning/10 text-warning border-warning/20'
                                                             }`}>
-                                                                {reviewStatus === 'REVIEWED' ? 'Reviewed' : 'Pending'}
+                                                                <span className={`h-1.5 w-1.5 rounded-full ${isReviewed ? 'bg-success' : 'bg-warning'}`} />
+                                                                {isReviewed ? 'Reviewed' : 'Pending'}
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -526,9 +619,9 @@ const CaseDetail = () => {
                                         </tbody>
                                     </table>
                                     {documents.length >= 20 && (
-                                        <div className="px-4 py-3 border-t border-border/60 text-center">
-                                            <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${id}/search`)}>
-                                                View all documents in Search <ArrowLeft className="ml-1 h-3 w-3 rotate-180" />
+                                        <div className="px-4 py-3 border-t border-border/60 text-center bg-muted/20">
+                                            <Button variant="ghost" size="sm" className="text-primary gap-1.5" onClick={() => navigate(`/cases/${id}/search`)}>
+                                                View all documents in Search <ArrowLeft className="h-3 w-3 rotate-180" />
                                             </Button>
                                         </div>
                                     )}
