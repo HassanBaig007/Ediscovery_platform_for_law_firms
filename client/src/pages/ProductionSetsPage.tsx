@@ -21,6 +21,35 @@ import { useToastStore } from '../store/toastStore';
 import { BatesNumberingModal } from '../components/enhanced/production';
 import { useRole } from '../hooks/useRole';
 
+const getMimeLabel = (mimeType?: string): string => {
+  if (!mimeType) return 'Unknown type';
+  const map: Record<string, string> = {
+    'application/pdf': 'PDF',
+    'application/msword': 'Word Document',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word Document',
+    'application/vnd.ms-excel': 'Excel Spreadsheet',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel Spreadsheet',
+    'application/vnd.ms-powerpoint': 'PowerPoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PowerPoint',
+    'text/plain': 'Text File',
+    'text/html': 'HTML',
+    'text/csv': 'CSV',
+    'image/jpeg': 'JPEG Image',
+    'image/png': 'PNG Image',
+    'image/gif': 'GIF Image',
+    'image/tiff': 'TIFF Image',
+    'image/bmp': 'BMP Image',
+    'message/rfc822': 'Email',
+    'application/vnd.ms-outlook': 'Outlook Email',
+    'application/zip': 'ZIP Archive',
+    'application/x-zip-compressed': 'ZIP Archive',
+    'application/json': 'JSON',
+    'application/xml': 'XML',
+    'text/xml': 'XML',
+  };
+  return map[mimeType.toLowerCase()] ?? mimeType;
+};
+
 interface ProductionDocument {
   documentId: string;
   batesNumber?: string;
@@ -761,7 +790,7 @@ const ProductionSetsPage = () => {
                     if (docsPrivilegedOnly && !(doc.coding && doc.coding.privilegeStatus !== 'NOT_PRIVILEGED')) return false;
                     if (!docsSearchQuery) return true;
                     const q = docsSearchQuery.toLowerCase();
-                    return (doc.filename || '').toLowerCase().includes(q) || (doc.custodian || '').toLowerCase().includes(q) || (doc.mimeType || '').toLowerCase().includes(q);
+                    return (doc.filename || '').toLowerCase().includes(q) || (doc.custodianId?.name || doc.custodian || '').toLowerCase().includes(q) || (doc.fileType || doc.mimeType || '').toLowerCase().includes(q);
                   })
                   .map((doc: any) => (
                   <label key={doc.id || doc._id} className="flex items-start gap-3 p-3 border rounded-md cursor-pointer hover:bg-muted/50 transition-colors">
@@ -777,7 +806,9 @@ const ProductionSetsPage = () => {
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{doc.filename}</p>
-                      <p className="text-xs text-muted-foreground truncate">{doc.custodian || 'No custodian'} • {doc.mimeType || 'Unknown type'}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {doc.custodianId?.name || doc.custodian || 'No custodian'} • {getMimeLabel(doc.fileType || doc.mimeType)}
+                      </p>
                       {doc.coding && doc.coding.privilegeStatus !== 'NOT_PRIVILEGED' && (
                         <Badge variant="outline" className="mt-1 bg-destructive/10 text-destructive text-[10px] leading-tight px-1 py-0">Privileged</Badge>
                       )}
