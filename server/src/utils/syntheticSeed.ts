@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 import mongoose from 'mongoose';
+import fs from 'node:fs';
+import path from 'node:path';
 import User from '../models/User';
 import Case from '../models/Case';
 import Custodian from '../models/Custodian';
@@ -7,6 +9,22 @@ import IssueTag from '../models/IssueTag';
 import Document from '../models/Document';
 import Production from '../models/Production';
 import Notification from '../models/Notification';
+
+const resolveServerRoot = (): string => {
+    const fromSrcRuntime = path.resolve(__dirname, '../../');
+    if (fs.existsSync(path.join(fromSrcRuntime, 'package.json'))) {
+        return fromSrcRuntime;
+    }
+
+    const fromDistRuntime = path.resolve(__dirname, '../../../../');
+    if (fs.existsSync(path.join(fromDistRuntime, 'package.json'))) {
+        return fromDistRuntime;
+    }
+
+    return fromSrcRuntime;
+};
+
+const SERVER_ROOT = resolveServerRoot();
 
 type SeedSummary = {
   users: { created: number; reused: number };
@@ -58,25 +76,27 @@ export async function seedSyntheticData(options?: { reset?: boolean; seed?: numb
   };
 
   const seedEmailDomain = 'seed.local';
-  const casePrefix = 'SYN-2026';
+  const casePrefix = 'LAW-2026';
 
   if (reset) {
-    const seedUsers = await User.find({ email: { $regex: `@${seedEmailDomain}$` } }).select('_id');
-    const seedCases = await Case.find({ caseNumber: { $regex: `^${casePrefix}-` } }).select('_id');
-    const caseIds = seedCases.map((c) => c._id);
+    await Promise.all([
+      User.deleteMany({}),
+      Case.deleteMany({}),
+      Custodian.deleteMany({}),
+      IssueTag.deleteMany({}),
+      Document.deleteMany({}),
+      Production.deleteMany({}),
+      Notification.deleteMany({}),
+      mongoose.connection.collection('auditlogs')?.deleteMany({}).catch(() => {})
+    ]);
 
-    if (caseIds.length > 0) {
-      await Promise.all([
-        Custodian.deleteMany({ caseId: { $in: caseIds } }),
-        IssueTag.deleteMany({ caseId: { $in: caseIds } }),
-        Document.deleteMany({ caseId: { $in: caseIds } }),
-        Production.deleteMany({ caseId: { $in: caseIds } }),
-      ]);
-      await Case.deleteMany({ _id: { $in: caseIds } });
-    }
-
-    if (seedUsers.length > 0) {
-      await User.deleteMany({ _id: { $in: seedUsers.map((u) => u._id) } });
+    const uploadDir = path.join(SERVER_ROOT, 'uploads');
+    if (fs.existsSync(uploadDir)) {
+      try {
+        fs.rmSync(uploadDir, { recursive: true, force: true });
+      } catch (err) {
+        console.error('Failed to clean uploads directory:', err);
+      }
     }
   }
 
@@ -346,6 +366,35 @@ export async function seedSyntheticData(options?: { reset?: boolean; seed?: numb
         },
         tags: tagSample,
       });
+
+      // Write physical file to disk
+      try {
+        const relativePath = filePath.replace(/^[/\\]+/, '');
+        const fullPath = path.join(SERVER_ROOT, relativePath);
+        const dirPath = path.dirname(fullPath);
+        if (!fs.existsSync(dirPath)) {
+          fs.mkdirSync(dirPath, { recursive: true });
+        }
+        if (ft.ext === 'pdf') {
+          const minimalPdf = Buffer.from(
+            '%PDF-1.4\n' +
+            '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n' +
+            '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n' +
+            '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>\nendobj\n' +
+            '4 0 obj\n<< /Length 60 >>\nstream\n' +
+            'BT\n/F1 12 Tf\n72 712 Td\n(' + filename.replace(/[()]/g, '') + ') Tj\nET\n' +
+            'endstream\nendobj\n' +
+            'xref\n0 5\n0000000000 65535 f\n0000000009 00000 n\n0000000056 00000 n\n0000000111 00000 n\n0000000212 00000 n\n' +
+            'trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n323\n%%EOF'
+          );
+          fs.writeFileSync(fullPath, minimalPdf);
+        } else {
+          fs.writeFileSync(fullPath, createdDoc.extractedText || 'Dummy Content');
+        }
+      } catch (err) {
+        console.error(`Failed to write seeded file: ${filename}`, err);
+      }
+
       summary.documents.created += 1;
       documents.push(createdDoc);
     }

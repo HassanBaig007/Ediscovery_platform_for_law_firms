@@ -31,14 +31,25 @@ export const DocumentViewer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [viewSource, setViewSource] = useState<'file' | 'text'>('file');
+
+  // Reset viewSource when document changes
+  useEffect(() => {
+    setViewSource('file');
+  }, [documentId]);
 
   // Redaction state
   const [redactionBoxes, setRedactionBoxes] = useState<{x: number, y: number, w: number, h: number}[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentBox, setCurrentBox] = useState<{startX: number, startY: number, x: number, y: number, w: number, h: number} | null>(null);
 
-  // Determine view mode based on file type
+  // Determine view mode based on file type and viewSource selection
   useEffect(() => {
+    if (viewSource === 'text') {
+      setViewMode('text');
+      return;
+    }
+
     const normalizedType = fileType.toLowerCase();
     const extension = filename.split('.').pop()?.toLowerCase() || '';
     const imageExtensions = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tif', 'tiff']);
@@ -55,7 +66,7 @@ export const DocumentViewer = ({
     } else {
       setViewMode('unsupported');
     }
-  }, [fileType, extractedText, filename]);
+  }, [fileType, extractedText, filename, viewSource]);
 
   // Cleanup generated object URLs when viewer unmounts or URL changes.
   useEffect(() => {
@@ -65,6 +76,34 @@ export const DocumentViewer = ({
       }
     };
   }, [previewUrl]);
+
+  const fetchRedactionBoxes = useCallback(() => {
+    if (!documentId) return;
+    api.get(`/redaction/document/${documentId}`)
+      .then(res => {
+        const boxes = (res.data || []).map((r: any) => ({
+          x: r.position.x,
+          y: r.position.y,
+          w: r.position.width,
+          h: r.position.height
+        }));
+        setRedactionBoxes(boxes);
+      })
+      .catch(err => {
+        console.error('Failed to load redactions for viewer:', err);
+      });
+  }, [documentId]);
+
+  useEffect(() => {
+    fetchRedactionBoxes();
+  }, [fetchRedactionBoxes]);
+
+  useEffect(() => {
+    window.addEventListener('redactions-changed', fetchRedactionBoxes);
+    return () => {
+      window.removeEventListener('redactions-changed', fetchRedactionBoxes);
+    };
+  }, [fetchRedactionBoxes]);
 
   // Load inline preview for binary types (images / PDFs)
   useEffect(() => {
@@ -206,7 +245,17 @@ export const DocumentViewer = ({
   const handlePointerUp = () => {
     if (!isDrawing || !currentBox || !isRedactionMode) return;
     if (currentBox.w > 5 && currentBox.h > 5) {
-      setRedactionBoxes(prev => [...prev, { x: currentBox.x, y: currentBox.y, w: currentBox.w, h: currentBox.h }]);
+      const newBox = {
+        x: Math.round(currentBox.x),
+        y: Math.round(currentBox.y),
+        width: Math.round(currentBox.w),
+        height: Math.round(currentBox.h)
+      };
+      
+      // Dispatch custom event to notify RedactionPanel
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('redaction-drawn', { detail: { position: newBox } }));
+      }
     }
     setIsDrawing(false);
     setCurrentBox(null);
@@ -217,7 +266,11 @@ export const DocumentViewer = ({
     return (
       <div 
         className="absolute inset-0 z-50 overflow-hidden"
-        style={{ cursor: isRedactionMode ? 'crosshair' : 'default', touchAction: 'none' }}
+        style={{ 
+          cursor: isRedactionMode ? 'crosshair' : 'default', 
+          touchAction: 'none',
+          pointerEvents: isRedactionMode ? 'auto' : 'none'
+        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -229,10 +282,10 @@ export const DocumentViewer = ({
             </div>
         )}
         {redactionBoxes.map((box, i) => (
-          <div key={`${box.x}-${box.y}-${box.w}-${box.h}-${i}`} className="absolute bg-black shadow-sm" style={{ left: box.x, top: box.y, width: box.w, height: box.h }} />
+          <div key={`${box.x}-${box.y}-${box.w}-${box.h}-${i}`} className="absolute bg-black shadow-sm" style={{ left: `${box.x}px`, top: `${box.y}px`, width: `${box.w}px`, height: `${box.h}px` }} />
         ))}
         {isDrawing && currentBox && (
-          <div className="absolute bg-black/60 border border-black" style={{ left: currentBox.x, top: currentBox.y, width: currentBox.w, height: currentBox.h }} />
+          <div className="absolute bg-black/60 border border-black" style={{ left: `${currentBox.x}px`, top: `${currentBox.y}px`, width: `${currentBox.w}px`, height: `${currentBox.h}px` }} />
         )}
       </div>
     );
@@ -241,12 +294,42 @@ export const DocumentViewer = ({
   const renderToolbar = () => (
     <div className="h-10 bg-card border-b border-border flex items-center justify-between px-3.5 shrink-0">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-foreground truncate max-w-[260px]" title={filename}>
+        <span className="text-sm font-semibold text-foreground truncate max-w-[260px]" title={filename}>
           {filename}
         </span>
         <span className="text-xs text-muted-foreground uppercase px-2 py-0.5 bg-muted rounded">
           {fileType || 'Unknown'}
         </span>
+        
+        {/* Native / Text View Switcher */}
+        {extractedText && (
+          <div className="flex items-center bg-muted rounded-md p-0.5 border border-border ml-2.5">
+            <button
+              type="button"
+              onClick={() => setViewSource('file')}
+              className={cn(
+                "text-[10px] font-semibold px-2 py-0.5 rounded transition-colors",
+                viewSource === 'file' 
+                  ? "bg-card text-foreground shadow-sm" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Native
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewSource('text')}
+              className={cn(
+                "text-[10px] font-semibold px-2 py-0.5 rounded transition-colors",
+                viewSource === 'text' 
+                  ? "bg-card text-foreground shadow-sm" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Text
+            </button>
+          </div>
+        )}
       </div>
       
       <div className="flex items-center gap-1">
@@ -425,13 +508,14 @@ export const DocumentViewer = ({
     return (
       <div className="flex-1 overflow-auto bg-muted px-4 py-4">
         <div
-          className="w-full bg-card rounded-lg shadow-sm overflow-hidden"
+          className="w-full bg-card rounded-lg shadow-sm overflow-hidden relative"
           style={{
             transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
             transformOrigin: 'top center',
             transition: 'transform 0.2s ease-out'
           }}
         >
+          {renderRedactionCanvas()}
           <iframe
             src={previewUrl}
             title={filename}

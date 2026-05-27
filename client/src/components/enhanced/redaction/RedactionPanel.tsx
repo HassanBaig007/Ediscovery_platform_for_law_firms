@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Scissors, Trash2, CheckCircle, AlertCircle, Loader2, Plus, Shield } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { Badge } from '../../ui/Badge';
@@ -63,6 +63,23 @@ export const RedactionPanel = ({ documentId, className }: RedactionPanelProps) =
     }
   }, [documentId]);
 
+  useEffect(() => {
+    loadRedactions();
+  }, [loadRedactions]);
+
+  useEffect(() => {
+    const handleDrawn = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setPosition(customEvent.detail.position);
+      setIsAdding(true);
+    };
+
+    window.addEventListener('redaction-drawn', handleDrawn);
+    return () => {
+      window.removeEventListener('redaction-drawn', handleDrawn);
+    };
+  }, []);
+
   const handleApplyRedaction = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -79,6 +96,7 @@ export const RedactionPanel = ({ documentId, className }: RedactionPanelProps) =
       });
       setRedactions(prev => [...prev, res.data]);
       setIsAdding(false);
+      window.dispatchEvent(new CustomEvent('redactions-changed'));
       addToast({ title: 'Redaction applied', type: 'success' });
     } catch (err: any) {
       addToast({
@@ -95,6 +113,7 @@ export const RedactionPanel = ({ documentId, className }: RedactionPanelProps) =
     try {
       await api.delete(`/redaction/${redactionId}`, { params: { documentId } });
       setRedactions(prev => prev.filter(r => r.id !== redactionId));
+      window.dispatchEvent(new CustomEvent('redactions-changed'));
       addToast({ title: 'Redaction removed', type: 'success' });
     } catch (err: any) {
       addToast({
@@ -113,6 +132,7 @@ export const RedactionPanel = ({ documentId, className }: RedactionPanelProps) =
       setRedactions(prev =>
         prev.map(r => r.id === redactionId ? { ...r, isApproved: true } : r)
       );
+      window.dispatchEvent(new CustomEvent('redactions-changed'));
       addToast({ title: 'Redaction approved', type: 'success' });
     } catch (err: any) {
       addToast({
@@ -122,7 +142,7 @@ export const RedactionPanel = ({ documentId, className }: RedactionPanelProps) =
     } finally {
       setIsLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, documentId]);
 
   return (
     <div className={cn('flex flex-col h-full bg-card border-l border-border', className)}>

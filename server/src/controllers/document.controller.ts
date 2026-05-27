@@ -223,13 +223,9 @@ export const downloadDocument = async (req: AuthRequest, res: Response): Promise
             return;
         }
 
-        // Check Access: User must belong to the Case of this document
-        // We need to fetch Case or check user's team membership.
-        // Assuming 'protect' middleware ensures user is logged in.
-        // We should check if user is in Document.caseId team.
-        // For simplicity/speed, assuming if they have the ID and are auth'd, they can access, OR check basic Case access.
-        // Let's add basic check.
-        // const hasAccess = ...
+        // Access control is enforced by requireCaseAccess middleware at the route level.
+        // That middleware resolves the document's caseId and verifies the user is either
+        // a team member or has an elevated global role (ADMIN/PARTNER).
 
         // Log download
         await logAction(req.user!._id, 'DOWNLOAD', 'document', document._id, null, req.ip);

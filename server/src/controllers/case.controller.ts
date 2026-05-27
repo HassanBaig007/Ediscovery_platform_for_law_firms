@@ -55,6 +55,9 @@ export const createCase = async (req: AuthRequest, res: Response): Promise<void>
         
         // Explicitly convert to JSON to ensure toJSON transform is applied
         const caseData = populatedCase.toJSON() as any;
+        if (caseData.team) {
+            caseData.team = caseData.team.filter((member: any) => member.user !== null && member.user !== undefined);
+        }
         console.log('[createCase] Transformed case data, id field:', caseData.id);
         
         res.status(201).json(caseData);
@@ -133,8 +136,16 @@ export const getCases = async (req: AuthRequest, res: Response): Promise<void> =
             Case.countDocuments({ ...baseQuery, status: 'ARCHIVED' })
         ]);
 
+        const caseDataList = cases.map(caseItem => {
+            const caseData = caseItem.toJSON() as any;
+            if (caseData.team) {
+                caseData.team = caseData.team.filter((member: any) => member.user !== null && member.user !== undefined);
+            }
+            return caseData;
+        });
+
         res.json({
-            cases,
+            cases: caseDataList,
             page: pageNum,
             pages: Math.ceil(total / limitNum),
             total,
@@ -176,6 +187,7 @@ export const getCaseById = async (req: AuthRequest, res: Response): Promise<void
         // Check access: Admin, Partner, or Team Member
         const isTeamMember = caseItem.team.some(member => {
             const memberUser: any = member.user;
+            if (!memberUser) return false;
             const memberId = memberUser._id ? memberUser._id.toString() : memberUser.toString();
             return memberId === user._id.toString();
         });
@@ -189,6 +201,9 @@ export const getCaseById = async (req: AuthRequest, res: Response): Promise<void
         console.log('[getCaseById] Access granted, returning case data');
         // Explicitly convert to JSON to ensure toJSON transform is applied
         const caseData = caseItem.toJSON() as any;
+        if (caseData.team) {
+            caseData.team = caseData.team.filter((member: any) => member.user !== null && member.user !== undefined);
+        }
         res.json(caseData);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
@@ -213,6 +228,7 @@ export const updateCase = async (req: AuthRequest, res: Response): Promise<void>
         // Check permission: Admin or Lead
         const isLead = caseItem.team.some(member => {
             const memberUser: any = member.user;
+            if (!memberUser) return false;
             return memberUser.toString() === user._id.toString() && member.role === 'LEAD';
         });
 
@@ -227,7 +243,11 @@ export const updateCase = async (req: AuthRequest, res: Response): Promise<void>
         caseItem.status = status || caseItem.status;
 
         const updatedCase = await caseItem.save();
-        res.json(updatedCase);
+        const caseData = updatedCase.toJSON() as any;
+        if (caseData.team) {
+            caseData.team = caseData.team.filter((member: any) => member.user !== null && member.user !== undefined);
+        }
+        res.json(caseData);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
@@ -281,6 +301,7 @@ export const getCaseActivity = async (req: AuthRequest, res: Response): Promise<
         const user = req.user as IUserDocument;
         const isTeamMember = caseItem.team.some(member => {
             const memberUser: any = member.user;
+            if (!memberUser) return false;
             const memberId = memberUser._id ? memberUser._id.toString() : memberUser.toString();
             return memberId === user._id.toString();
         });
@@ -384,6 +405,7 @@ export const addTeamMember = async (req: AuthRequest, res: Response): Promise<vo
         const user = req.user as IUserDocument;
         const isLead = caseItem.team.some(member => {
             const memberUser: any = member.user;
+            if (!memberUser) return false;
             return memberUser.toString() === user._id.toString() && member.role === 'LEAD';
         });
 
@@ -395,6 +417,7 @@ export const addTeamMember = async (req: AuthRequest, res: Response): Promise<vo
         // Check if user already in team
         if (caseItem.team.some(member => {
             const memberUser: any = member.user;
+            if (!memberUser) return false;
             return memberUser.toString() === userId;
         })) {
             res.status(400).json({ message: 'User already in team' });
@@ -434,7 +457,15 @@ export const addTeamMember = async (req: AuthRequest, res: Response): Promise<vo
             role: m.role
         })));
         
-        res.json(updatedCase);
+        if (!updatedCase) {
+            res.status(404).json({ message: 'Case not found' });
+            return;
+        }
+        const caseData = updatedCase.toJSON() as any;
+        if (caseData.team) {
+            caseData.team = caseData.team.filter((member: any) => member.user !== null && member.user !== undefined);
+        }
+        res.json(caseData);
     } catch (error: any) {
         console.error('[addTeamMember] Error:', error);
         res.status(500).json({ message: error.message });
@@ -457,6 +488,7 @@ export const removeTeamMember = async (req: AuthRequest, res: Response): Promise
         const user = req.user as IUserDocument;
         const isLead = caseItem.team.some(member => {
             const memberUser: any = member.user;
+            if (!memberUser) return false;
             return memberUser.toString() === user._id.toString() && member.role === 'LEAD';
         });
 
@@ -468,6 +500,7 @@ export const removeTeamMember = async (req: AuthRequest, res: Response): Promise
         // Prevent removing the last LEAD
         const memberToRemove = caseItem.team.find(m => {
             const memberUser: any = m.user;
+            if (!memberUser) return false;
             return memberUser.toString() === userId;
         });
 
@@ -481,12 +514,21 @@ export const removeTeamMember = async (req: AuthRequest, res: Response): Promise
 
         caseItem.team = caseItem.team.filter(member => {
             const memberUser: any = member.user;
+            if (!memberUser) return false;
             return memberUser.toString() !== userId;
         });
         await caseItem.save();
 
         const updatedCase = await Case.findById(id).populate('team.user', 'firstName lastName email role');
-        res.json(updatedCase);
+        if (!updatedCase) {
+            res.status(404).json({ message: 'Case not found' });
+            return;
+        }
+        const caseData = updatedCase.toJSON() as any;
+        if (caseData.team) {
+            caseData.team = caseData.team.filter((member: any) => member.user !== null && member.user !== undefined);
+        }
+        res.json(caseData);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
@@ -503,7 +545,9 @@ export const getAvailableUsers = async (req: AuthRequest, res: Response): Promis
             return;
         }
 
-        const teamUserIds = caseItem.team.map(m => m.user);
+        const teamUserIds = caseItem.team
+            .map(m => m.user)
+            .filter(user => user !== null && user !== undefined);
 
         const users = await User.find({
             _id: { $nin: teamUserIds },

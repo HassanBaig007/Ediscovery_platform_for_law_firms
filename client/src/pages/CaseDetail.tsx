@@ -125,17 +125,22 @@ const CaseDetail = () => {
     useEffect(() => {
         fetchAnalytics();
         
-        // Listen for coding submissions to refresh analytics
-        const handleCoding = () => fetchAnalytics();
+        const handleRefresh = () => {
+            fetchAnalytics();
+            fetchDocuments();
+        };
+
         if (typeof window !== 'undefined') {
-            window.addEventListener('coding-submitted', handleCoding);
+            window.addEventListener('coding-submitted', handleRefresh);
+            window.addEventListener('redactions-changed', handleRefresh);
         }
         return () => {
             if (typeof window !== 'undefined') {
-                window.removeEventListener('coding-submitted', handleCoding);
+                window.removeEventListener('coding-submitted', handleRefresh);
+                window.removeEventListener('redactions-changed', handleRefresh);
             }
         };
-    }, [fetchAnalytics]);
+    }, [fetchAnalytics, fetchDocuments]);
 
     useEffect(() => {
         fetchDocuments();
@@ -412,6 +417,12 @@ const CaseDetail = () => {
                                 Documents {documents.length > 0 && <span className="text-muted-foreground font-normal text-sm">({documents.length} shown)</span>}
                             </h2>
                             <div className="flex flex-wrap gap-2">
+                                {canReviewCase && analytics && analytics.pendingDocuments > 0 && (
+                                    <Button size="sm" onClick={() => navigate(`/cases/${id}/review`)} className="gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
+                                        <FileText className="h-3.5 w-3.5" /> Start Review
+                                        <span className="ml-1 text-[10px] bg-white/20 rounded-full px-1.5">{analytics.pendingDocuments}</span>
+                                    </Button>
+                                )}
                                 {canUploadToCase && (
                                     <Button size="sm" onClick={() => navigate(`/cases/${id}/upload`)} className="gap-1.5">
                                         <Upload className="h-3.5 w-3.5" /> Upload Documents

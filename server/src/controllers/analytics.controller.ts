@@ -439,39 +439,41 @@ export const getTeamPerformance = async (req: AuthRequest, res: Response): Promi
         }
 
         const teamPerformance = await Promise.all(
-            caseItem.team.map(async (member) => {
-                const docsReviewed = await Document.countDocuments({
-                    caseId,
-                    'coding.reviewedBy': member.user._id
-                });
-
-                // Get average time per document
-                const reviewedDocs = await Document.find({
-                    caseId,
-                    'coding.reviewedBy': member.user._id,
-                    'coding.reviewedAt': { $exists: true }
-                }).select('coding.reviewedAt createdAt');
-
-                let avgTimePerDoc = 0;
-                if (reviewedDocs.length > 0) {
-                    let totalTime = 0;
-                    reviewedDocs.forEach((doc: any) => {
-                        const reviewTime = new Date(doc.coding.reviewedAt).getTime();
-                        const uploadTime = new Date(doc.createdAt).getTime();
-                        totalTime += (reviewTime - uploadTime);
+            caseItem.team
+                .filter(member => member.user !== null && member.user !== undefined)
+                .map(async (member) => {
+                    const user = member.user as any;
+                    const docsReviewed = await Document.countDocuments({
+                        caseId,
+                        'coding.reviewedBy': user._id
                     });
-                    avgTimePerDoc = Math.round(totalTime / reviewedDocs.length / 1000 / 60); // in minutes
-                }
 
-                const user = member.user as any;
-                return {
-                    userId: user._id,
-                    userName: `${user.firstName} ${user.lastName}`,
-                    role: member.role,
-                    documentsReviewed: docsReviewed,
-                    avgTimePerDoc
-                };
-            })
+                    // Get average time per document
+                    const reviewedDocs = await Document.find({
+                        caseId,
+                        'coding.reviewedBy': user._id,
+                        'coding.reviewedAt': { $exists: true }
+                    }).select('coding.reviewedAt createdAt');
+
+                    let avgTimePerDoc = 0;
+                    if (reviewedDocs.length > 0) {
+                        let totalTime = 0;
+                        reviewedDocs.forEach((doc: any) => {
+                            const reviewTime = new Date(doc.coding.reviewedAt).getTime();
+                            const uploadTime = new Date(doc.createdAt).getTime();
+                            totalTime += (reviewTime - uploadTime);
+                        });
+                        avgTimePerDoc = Math.round(totalTime / reviewedDocs.length / 1000 / 60); // in minutes
+                    }
+
+                    return {
+                        userId: user._id,
+                        userName: `${user.firstName} ${user.lastName}`,
+                        role: member.role,
+                        documentsReviewed: docsReviewed,
+                        avgTimePerDoc
+                    };
+                })
         );
 
         res.json(teamPerformance);

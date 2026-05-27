@@ -26,13 +26,14 @@ const ReviewInner = () => {
     const handleDownload = async () => {
         if (!currentDocument) return;
         try {
-            const response = await api.get(`/documents/${currentDocument.id}/download`, {
+            const docId = currentDocument.id || (currentDocument as any)._id;
+            const response = await api.get(`/documents/${docId}/download`, {
                 responseType: 'blob'
             });
             const url = globalThis.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', currentDocument.filename || `document_${currentDocument.id}`);
+            link.setAttribute('download', currentDocument.filename || `document_${docId}`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -128,7 +129,7 @@ const ReviewInner = () => {
                 {/* Document Viewer */}
                 <div className="flex-1 bg-muted flex flex-col overflow-hidden">
                     <DocumentViewer
-                        documentId={currentDocument.id}
+                        documentId={currentDocument.id || (currentDocument as any)._id}
                         filename={currentDocument.filename}
                         fileType={currentDocument.fileType}
                         extractedText={currentDocument.extractedText}
@@ -148,7 +149,7 @@ const ReviewInner = () => {
                         {activePanel === 'coding' ? (
                             <CodingPanel />
                         ) : (
-                            <RedactionPanel documentId={currentDocument.id} />
+                            <RedactionPanel documentId={currentDocument.id || (currentDocument as any)._id} />
                         )}
                     </div>
                 </motion.div>

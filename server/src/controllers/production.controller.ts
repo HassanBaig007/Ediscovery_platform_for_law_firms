@@ -305,7 +305,10 @@ export const exportProduction = async (req: AuthRequest, res: Response): Promise
 export const getProductionsByCase = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const { caseId } = req.params;
-        const productions = await Production.find({ caseId: caseId as any }).sort({ createdAt: -1 });
+        const productions = await Production.find({ caseId: caseId as any })
+            .populate('createdBy', 'firstName lastName email')
+            .populate('approvedBy', 'firstName lastName email')
+            .sort({ createdAt: -1 });
         res.json(productions);
     } catch (error: any) {
         res.status(500).json({ message: error.message });

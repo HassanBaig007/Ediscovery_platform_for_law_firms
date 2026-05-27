@@ -33,6 +33,7 @@ import IntegrationsPage from './pages/IntegrationsPage';
 import LicenseManagementPage from './pages/LicenseManagementPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/Layout/MainLayout';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
@@ -52,6 +53,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ErrorBoundary>
       <Router>
         <Routes>
           {/* Public Routes */}
@@ -108,6 +110,7 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }

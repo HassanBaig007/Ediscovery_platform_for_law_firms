@@ -1,6 +1,7 @@
-﻿import express from 'express';
+import express from 'express';
 import { registerUser, loginUser, getMe, forgotPassword, resetPassword, refreshToken, updateProfile, changeOwnPassword } from '../controllers/authController';
 import { protect, adminOnly } from '../middleware/authMiddleware';
+import { rateLimit } from '../middleware/rateLimit.middleware';
 
 const router = express.Router();
 
@@ -11,11 +12,11 @@ router.get('/test', (req, res) => {
 
 // Only authenticated Admins may create new user accounts
 router.post('/register', protect, adminOnly, registerUser);
-router.post('/login', loginUser);
+router.post('/login', rateLimit(10, 15 * 60 * 1000), loginUser);
 router.get('/me', protect, getMe);
 router.post('/refresh', refreshToken);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
+router.post('/forgot-password', rateLimit(5, 15 * 60 * 1000), forgotPassword);
+router.post('/reset-password', rateLimit(5, 15 * 60 * 1000), resetPassword);
 router.put('/profile', protect, updateProfile);
 router.put('/password', protect, changeOwnPassword);
 

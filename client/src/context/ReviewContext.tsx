@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import api from '../services/api';
-
+import { useToastStore } from '../store/toastStore';
 import { IDocument, IIssueTag } from '../types';
 import { useParams } from 'react-router-dom';
 
@@ -12,6 +12,7 @@ interface ReviewState {
     error: string | null;
     tags: IIssueTag[];
     historyStack: string[]; // IDs of reviewed docs for 'Previous' button
+    skippedIds: string[]; // Track skipped document IDs
 }
 
 type Action =
@@ -20,7 +21,9 @@ type Action =
     | { type: 'SET_ERROR'; payload: string }
     | { type: 'SET_TAGS'; payload: IIssueTag[] }
     | { type: 'PUSH_HISTORY'; payload: string }
-    | { type: 'POP_HISTORY' };
+    | { type: 'POP_HISTORY' }
+    | { type: 'ADD_SKIPPED'; payload: string }
+    | { type: 'CLEAR_SKIPPED' };
 
 const initialState: ReviewState = {
     currentDocument: null,
@@ -28,7 +31,8 @@ const initialState: ReviewState = {
     loading: true,
     error: null,
     tags: [],
-    historyStack: []
+    historyStack: [],
+    skippedIds: []
 };
 
 const reviewReducer = (state: ReviewState, action: Action): ReviewState => {
@@ -45,6 +49,10 @@ const reviewReducer = (state: ReviewState, action: Action): ReviewState => {
             return { ...state, historyStack: [...state.historyStack, action.payload] };
         case 'POP_HISTORY':
             return { ...state, historyStack: state.historyStack.slice(0, -1) };
+        case 'ADD_SKIPPED':
+            return { ...state, skippedIds: [...state.skippedIds, action.payload] };
+        case 'CLEAR_SKIPPED':
+            return { ...state, skippedIds: [] };
         default:
             return state;
     }
@@ -55,14 +63,15 @@ interface ReviewContextType extends ReviewState {
     submitCoding: (data: unknown) => Promise<void>;
     fetchTags: () => Promise<void>;
     goPrevious: () => Promise<void>;
+    skipDocument: () => Promise<void>;
 }
-
 
 const ReviewContext = createContext<ReviewContextType | undefined>(undefined);
 
 export const ReviewProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [state, dispatch] = useReducer(reviewReducer, initialState);
     const { id: caseId } = useParams<{ id: string }>();
+    const { addToast } = useToastStore();
 
     const fetchTags = useCallback(async () => {
         if (!caseId) return;
@@ -74,29 +83,29 @@ export const ReviewProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     }, [caseId]);
 
-    const fetchNextDocument = useCallback(async (skipIds: string[] = []) => {
-        // skipIds reserved for future queue optimization - currently handled by backend
-        void skipIds; // Intentionally unused - parameter reserved for future implementation
+    const fetchNextDocument = useCallback(async (customSkipIds?: string[]) => {
         if (!caseId) return;
 
         dispatch({ type: 'SET_LOADING', payload: true });
         try {
-            // If we have a current doc, add to skip list? Or handled by backend 'unreviewed' filter?
-            // Backend handles it.
-            const res = await api.get(`/cases/${caseId}/review/queue`);
+            const activeSkipIds = customSkipIds || state.skippedIds;
+            const res = await api.get(`/cases/${caseId}/review/queue`, {
+                params: {
+                    skipIds: activeSkipIds.join(',')
+                }
+            });
             dispatch({ type: 'SET_DOCUMENT', payload: res.data });
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to fetch document';
             dispatch({ type: 'SET_ERROR', payload: errorMessage });
         }
-    }, [caseId]);
-
+    }, [caseId, state.skippedIds]);
 
     const submitCoding = useCallback(async (data: unknown) => {
         if (!state.currentDocument) return;
 
         try {
-            const docId = state.currentDocument.id; // Use .id from frontend transform or check ._id
+            const docId = state.currentDocument.id || (state.currentDocument as any)._id;
             
             // Push current to history before moving
             dispatch({ type: 'PUSH_HISTORY', payload: docId });
@@ -119,12 +128,21 @@ export const ReviewProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('coding-submitted'));
             }
+            addToast({ title: 'Coding saved successfully', type: 'success' });
         } catch (error: unknown) {
             console.error('Coding failed', error);
-            alert('Failed to save coding');
+            addToast({ title: 'Failed to save coding', type: 'error' });
         }
     }, [state.currentDocument, fetchNextDocument]);
 
+    const skipDocument = useCallback(async () => {
+        if (!state.currentDocument) return;
+        const docId = state.currentDocument.id || (state.currentDocument as any)._id;
+        
+        dispatch({ type: 'ADD_SKIPPED', payload: docId });
+        const nextSkipIds = [...state.skippedIds, docId];
+        await fetchNextDocument(nextSkipIds);
+    }, [state.currentDocument, state.skippedIds, fetchNextDocument]);
 
     const goPrevious = useCallback(async () => {
         if (state.historyStack.length === 0) return;
@@ -133,21 +151,8 @@ export const ReviewProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         dispatch({ type: 'POP_HISTORY' }); // Remove from stack
         dispatch({ type: 'SET_LOADING', payload: true });
 
-        // Retrieve prev doc details
-        // We need a route for GET /api/documents/:id or similar?
-        // Reuse getReviewQueue? No.
-        // We partially implemented GET /api/cases/:caseId/documents in Controller but that's a list.
-        // We implemented GET /api/cases/:id/documents in PHASE 3? No, that was list.
-        // We probably need a simple GET /api/documents/:id route for this.
-        // Let's assume one exists or we add it quickly. 
-        // Plan check: "Backend: Create Document Controller (Upload, List, Download)".
-        // Did we create GetById? 
-        // Document Routes had: upload, list, download.
-        // We might need to add GetById to Document Controller.
-
         try {
-            // Assuming this route exists or we will add it to document.controller
-            const res = await api.get(`/documents/${prevDocId}`); // Need to implement this backend route!
+            const res = await api.get(`/documents/${prevDocId}`);
             dispatch({ type: 'SET_DOCUMENT', payload: res.data });
         } catch (error) {
             console.error('Failed to fetch previous doc', error);
@@ -164,15 +169,13 @@ export const ReviewProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, [caseId, fetchTags, fetchNextDocument]);
 
     return (
-        <ReviewContext.Provider value={{ ...state, fetchNextDocument, submitCoding, fetchTags, goPrevious }}>
+        <ReviewContext.Provider value={{ ...state, fetchNextDocument, submitCoding, fetchTags, goPrevious, skipDocument }}>
             {children}
         </ReviewContext.Provider>
     );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useReview = (): ReviewContextType => {
-
     const context = useContext(ReviewContext);
     if (context === undefined) {
         throw new Error('useReview must be used within a ReviewProvider');

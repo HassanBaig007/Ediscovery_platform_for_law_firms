@@ -19,8 +19,8 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
         let totalDocuments = 0;
         let pendingReview = 0;
 
-        if (userRole === 'ADMIN') {
-            // Admin sees all cases
+        if (userRole === 'ADMIN' || userRole === 'PARTNER') {
+            // Admin and Partner see all cases
             activeCases = await Case.countDocuments(applyNonSyntheticCaseFilter({ status: 'ACTIVE' }));
             
             const allCases = await Case.find(applyNonSyntheticCaseFilter({ status: 'ACTIVE' })).select('_id');
@@ -78,7 +78,7 @@ export const getRecentActivity = async (req: AuthRequest, res: Response): Promis
 
         let caseIds: any[] = [];
 
-        if (userRole === 'ADMIN') {
+        if (userRole === 'ADMIN' || userRole === 'PARTNER') {
             const allCases = await Case.find(applyNonSyntheticCaseFilter()).select('_id');
             caseIds = allCases.map(c => c._id);
         } else {
@@ -134,7 +134,7 @@ export const getOverview = async (req: AuthRequest, res: Response): Promise<void
 
         let cases: any[];
 
-        if (userRole === 'ADMIN') {
+        if (userRole === 'ADMIN' || userRole === 'PARTNER') {
             cases = await Case.find(applyNonSyntheticCaseFilter({ status: 'ACTIVE' }))
                 .select('caseName status createdAt')
                 .sort({ createdAt: -1 });

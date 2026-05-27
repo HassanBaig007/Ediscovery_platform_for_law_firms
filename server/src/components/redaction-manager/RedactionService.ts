@@ -2,6 +2,7 @@
 // Manages redaction application and coordinate storage
 
 import { Redaction, ProductionDocument } from '../../../../shared/enhanced-types';
+import User from '../../models/User';
 
 export interface RedactionArea {
     x: number;
@@ -61,9 +62,12 @@ export class RedactionService {
 
         const redaction = redactions[redactionIndex];
 
-        // Only the person who applied it or an admin can remove
-        if (redaction.appliedBy !== userId) {
-            throw new Error('Only the user who applied the redaction can remove it');
+        // Only the person who applied it or an admin/partner can remove
+        if (redaction.appliedBy?.toString() !== userId?.toString()) {
+            const user = await User.findById(userId);
+            if (!user || (user.role !== 'ADMIN' && user.role !== 'PARTNER')) {
+                throw new Error('Only the user who applied the redaction can remove it');
+            }
         }
 
         redactions.splice(redactionIndex, 1);

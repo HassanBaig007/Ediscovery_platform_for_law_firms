@@ -4,6 +4,7 @@
 import { Router, Request, Response } from 'express';
 import { getServiceContainer } from '../components/ServiceContainer';
 import { protect, requireCaseAccess, requireCaseRole, adminOnly } from '../middleware/authMiddleware';
+import Document from '../models/Document';
 
 const router = Router();
 
@@ -70,7 +71,28 @@ router.post('/api/redaction/apply', protect, requireCaseRole('LEAD', 'REVIEWER',
     try {
         const services = getServices();
         const { documentId, redaction } = req.body;
-        await services.redactionManager.applyRedaction(documentId, redaction);
+        const redactionWithUser = {
+            ...redaction,
+            appliedBy: (req as any).user!._id.toString()
+        };
+        await services.redactionManager.applyRedaction(documentId, redactionWithUser);
+
+        // Mark document as Reviewed
+        const document = await Document.findById(documentId);
+        if (document) {
+            document.coding = {
+                reviewedBy: (req as any).user!._id,
+                reviewedAt: new Date(),
+                updatedAt: new Date(),
+                privilegeStatus: document.coding?.privilegeStatus || 'NEEDS_REVIEW',
+                relevanceStatus: document.coding?.relevanceStatus || 'RELEVANT',
+                isConfidential: document.coding?.isConfidential ?? false,
+                privilegeReason: document.coding?.privilegeReason,
+                reviewNotes: document.coding?.reviewNotes
+            };
+            await document.save();
+        }
+
         const redactions = services.redactionManager.getDocumentRedactions(documentId);
         const applied = redactions[redactions.length - 1];
         res.json(applied ?? { success: true });
@@ -96,8 +118,27 @@ router.post('/api/redaction/approve/:redactionId', protect, requireCaseRole('LEA
     try {
         const services = getServices();
         const redactionId = Array.isArray(req.params.redactionId) ? req.params.redactionId[0] : req.params.redactionId;
-        const { reviewerId = 'system' } = req.body;
+        const { reviewerId = 'system', documentId } = req.body;
         await services.redactionManager.approveRedaction(redactionId, reviewerId);
+
+        // Mark document as Reviewed
+        if (documentId) {
+            const document = await Document.findById(documentId);
+            if (document) {
+                document.coding = {
+                    reviewedBy: (req as any).user!._id,
+                    reviewedAt: new Date(),
+                    updatedAt: new Date(),
+                    privilegeStatus: document.coding?.privilegeStatus || 'NEEDS_REVIEW',
+                    relevanceStatus: document.coding?.relevanceStatus || 'RELEVANT',
+                    isConfidential: document.coding?.isConfidential ?? false,
+                    privilegeReason: document.coding?.privilegeReason,
+                    reviewNotes: document.coding?.reviewNotes
+                };
+                await document.save();
+            }
+        }
+
         res.json({ success: true });
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Approval failed';
@@ -110,7 +151,7 @@ router.delete('/api/redaction/:redactionId', protect, requireCaseRole('LEAD', 'R
         const services = getServices();
         const redactionId = Array.isArray(req.params.redactionId) ? req.params.redactionId[0] : req.params.redactionId;
         const documentId = req.query.documentId as string | undefined;
-        const userId = (req.query.userId as string | undefined) || 'system';
+        const userId = (req as any).user!._id.toString();
 
         if (!documentId) {
             res.status(400).json({ error: 'documentId query parameter is required' });

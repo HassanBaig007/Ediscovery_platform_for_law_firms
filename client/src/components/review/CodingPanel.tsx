@@ -33,7 +33,7 @@ const RELEVANCE_STATUS_OPTIONS: CodingFormData['relevanceStatus'][] = [
 ];
 
 const CodingPanel: React.FC = () => {
-    const { currentDocument, tags, submitCoding, fetchNextDocument, goPrevious } = useReview();
+    const { currentDocument, tags, submitCoding, goPrevious, skipDocument } = useReview();
 
     const { register, handleSubmit, watch, reset } = useForm<CodingFormData>({
 
@@ -82,10 +82,11 @@ const CodingPanel: React.FC = () => {
     };
 
     const fetchHistory = async () => {
-        if (!currentDocument?.id) return;
+        const docId = currentDocument?.id || (currentDocument as any)?._id;
+        if (!docId) return;
         setIsLoadingHistory(true);
         try {
-            const res = await api.get(`/documents/${currentDocument.id}/coding-history`);
+            const res = await api.get(`/documents/${docId}/coding-history`);
             setHistory(res.data || []);
             setShowHistory(true);
         } catch (error) {
@@ -238,7 +239,7 @@ const CodingPanel: React.FC = () => {
                 <div className="flex space-x-2 flex-[2]">
                     <button
                         type="button"
-                        onClick={() => fetchNextDocument()} // Skip
+                        onClick={skipDocument} // Skip
                         className="flex-1 px-4 py-2 border border-border text-foreground bg-card rounded-md shadow-sm hover:bg-muted text-sm font-medium"
                     >
                         Skip
