@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
     Briefcase, FileText, Clock, Activity, ArrowRight, Loader2,
     TrendingUp, ChevronRight, Upload, Search, Users, BarChart3,
-    Shield, CheckCircle2, AlertCircle
+    Shield, CheckCircle2, AlertCircle, Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -15,77 +15,106 @@ import { dashboardService, DashboardStats, ActivityItem, CaseOverview } from '..
 import {
     formatUserRole as formatRoleLabel,
     ROLE_BADGE_CLASSNAMES,
-    ROLE_DASHBOARD_SUMMARIES
+    ROLE_DASHBOARD_SUMMARIES,
 } from '../utils/formatters';
 import { INGESTION_STAGES } from '../../../shared/constants';
 
+// ── Stat Card ─────────────────────────────────────────────────────────────────
 const StatCard = ({
-    icon: Icon,
-    label,
-    value,
-    accent = false,
-    warning = false,
-    onClick,
+    icon: Icon, label, value, variant = 'default', onClick,
 }: {
     icon: React.ElementType;
     label: string;
     value: string | number;
-    accent?: boolean;
-    warning?: boolean;
+    variant?: 'default' | 'accent' | 'warning' | 'success';
     onClick?: () => void;
-}) => (
-    <Card
-        className={`group cursor-pointer transition-all duration-200 hover:-translate-y-0.5 ${
-            accent
-                ? 'bg-primary text-primary-foreground border-primary/20'
-                : warning
-                ? 'border-warning/30 bg-warning/5'
-                : 'border-border'
-        }`}
-        onClick={onClick}
-    >
-        <CardContent className="p-5 flex items-center gap-4">
-            <div className={`p-2.5 rounded-xl ${
-                accent ? 'bg-white/10' : warning ? 'bg-warning/10' : 'bg-muted'
-            }`}>
-                <Icon className={`h-5 w-5 ${warning ? 'text-warning' : accent ? '' : 'text-muted-foreground'}`} />
-            </div>
-            <div className="min-w-0">
-                <div className={`text-2xl font-bold tracking-tight ${
-                    warning ? 'text-warning' : accent ? '' : 'text-foreground'
-                }`}>
-                    {typeof value === 'number' ? value.toLocaleString() : value}
+}) => {
+    const styles = {
+        default: {
+            card: 'border-border bg-card hover:border-primary/30',
+            iconWrap: 'bg-muted',
+            icon: 'text-muted-foreground',
+            value: 'text-foreground',
+            label: 'text-muted-foreground',
+        },
+        accent: {
+            card: 'border-primary/20 bg-primary text-primary-foreground',
+            iconWrap: 'bg-white/15',
+            icon: 'text-white',
+            value: 'text-white',
+            label: 'text-primary-foreground/70',
+        },
+        warning: {
+            card: 'border-amber-400/30 bg-amber-50 dark:bg-amber-950/20',
+            iconWrap: 'bg-amber-100 dark:bg-amber-900/40',
+            icon: 'text-amber-600 dark:text-amber-400',
+            value: 'text-amber-700 dark:text-amber-300',
+            label: 'text-amber-600/80 dark:text-amber-400/80',
+        },
+        success: {
+            card: 'border-emerald-400/30 bg-emerald-50 dark:bg-emerald-950/20',
+            iconWrap: 'bg-emerald-100 dark:bg-emerald-900/40',
+            icon: 'text-emerald-600 dark:text-emerald-400',
+            value: 'text-emerald-700 dark:text-emerald-300',
+            label: 'text-emerald-600/80 dark:text-emerald-400/80',
+        },
+    };
+    const s = styles[variant];
+    return (
+        <Card
+            className={`group cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${s.card}`}
+            onClick={onClick}
+        >
+            <CardContent className="p-5 flex items-center gap-4">
+                <div className={`p-2.5 rounded-xl shrink-0 ${s.iconWrap}`}>
+                    <Icon className={`h-5 w-5 ${s.icon}`} />
                 </div>
-                <div className={`text-sm ${
-                    accent ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                }`}>{label}</div>
-            </div>
-            <ChevronRight className={`ml-auto h-4 w-4 opacity-0 group-hover:opacity-60 transition-opacity ${
-                accent ? '' : 'text-muted-foreground'
-            }`} />
-        </CardContent>
-    </Card>
-);
+                <div className="min-w-0 flex-1">
+                    <div className={`text-2xl font-bold tracking-tight leading-none ${s.value}`}>
+                        {typeof value === 'number' ? value.toLocaleString() : value}
+                    </div>
+                    <div className={`text-xs font-medium mt-1 ${s.label}`}>{label}</div>
+                </div>
+                <ChevronRight className={`h-4 w-4 opacity-0 group-hover:opacity-50 transition-opacity shrink-0 ${s.icon}`} />
+            </CardContent>
+        </Card>
+    );
+};
 
-// Role-specific quick action cards
-const QuickActionCard = ({ icon: Icon, title, description, label: _label, onClick, color = 'primary' }: {
+// ── Quick Action Card ─────────────────────────────────────────────────────────
+const colorMap: Record<string, { wrap: string; icon: string }> = {
+    primary:     { wrap: 'bg-primary/10',     icon: 'text-primary' },
+    purple:      { wrap: 'bg-violet-500/10',  icon: 'text-violet-600 dark:text-violet-400' },
+    warning:     { wrap: 'bg-amber-500/10',   icon: 'text-amber-600 dark:text-amber-400' },
+    destructive: { wrap: 'bg-red-500/10',     icon: 'text-red-600 dark:text-red-400' },
+    success:     { wrap: 'bg-emerald-500/10', icon: 'text-emerald-600 dark:text-emerald-400' },
+};
+
+const QuickActionCard = ({ icon: Icon, title, description, onClick, color = 'primary' }: {
     icon: React.ElementType; title: string; description: string;
     label: string; onClick: () => void; color?: string;
-}) => (
-    <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer" onClick={onClick}>
-        <CardContent className="p-5 flex items-start gap-4">
-            <div className={`p-2.5 rounded-xl bg-${color}/10 shrink-0`}>
-                <Icon className={`h-5 w-5 text-${color}`} />
-            </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground">{title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{description}</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-0.5 group-hover:text-muted-foreground transition-colors" />
-        </CardContent>
-    </Card>
-);
+}) => {
+    const c = colorMap[color] ?? colorMap.primary;
+    return (
+        <Card
+            className="group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer border-border/60"
+            onClick={onClick}
+        >
+            <CardContent className="p-4 flex items-start gap-3">
+                <div className={`p-2 rounded-lg shrink-0 ${c.wrap}`}>
+                    <Icon className={`h-4 w-4 ${c.icon}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground leading-snug">{title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{description}</p>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0 mt-0.5 group-hover:text-muted-foreground transition-colors" />
+            </CardContent>
+        </Card>
+    );
+};
 
+// ── Page ──────────────────────────────────────────────────────────────────────
 const DashboardPage = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
@@ -108,15 +137,13 @@ const DashboardPage = () => {
             try {
                 const [statsData, activityData, overviewData] = await Promise.all([
                     dashboardService.getStats(),
-                    dashboardService.getRecentActivity(8),
+                    dashboardService.getRecentActivity(20),
                     dashboardService.getOverview(),
                 ]);
                 setStats(statsData);
-                const filteredActivity = activityData.filter((item) => !isSeededActivity(item));
-                setActivity(filteredActivity);
+                setActivity(activityData.filter(item => !isSeededActivity(item)));
                 setOverview(overviewData);
-            } catch (err) {
-                // Dashboard stats are non-critical; show empty state
+            } catch {
                 setStats(null);
             } finally {
                 setIsLoading(false);
@@ -143,138 +170,149 @@ const DashboardPage = () => {
 
     const normalizedRole = user?.role?.toUpperCase() ?? '';
     const roleMeta = normalizedRole
-        ? {
-            label: formatRoleLabel(normalizedRole),
-            color: ROLE_BADGE_CLASSNAMES[normalizedRole] ?? 'bg-muted text-muted-foreground border-border'
-        }
+        ? { label: formatRoleLabel(normalizedRole), color: ROLE_BADGE_CLASSNAMES[normalizedRole] ?? 'bg-muted text-muted-foreground border-border' }
         : null;
     const roleSummary = normalizedRole
         ? ROLE_DASHBOARD_SUMMARIES[normalizedRole] ?? 'Review your assigned work and recent activity.'
         : 'Review your assigned work and recent activity.';
 
-    // Role-specific quick actions
     const quickActions = [
-        // All roles
-        { icon: Briefcase, title: 'My Cases', description: 'View and manage your assigned cases.', label: 'Open Cases', onClick: () => navigate('/cases'), color: 'primary', show: true },
-        // ADMIN + PARTNER
-        { icon: BarChart3, title: 'Analytics', description: 'Review platform-wide metrics and trends.', label: 'View Analytics', onClick: () => navigate('/analytics'), color: 'purple', show: hasFullAccess },
-        { icon: Shield, title: 'Audit Logs', description: 'Monitor all system activity and changes.', label: 'View Logs', onClick: () => navigate('/admin/audit-logs'), color: 'warning', show: hasFullAccess },
-        // ADMIN only
-        { icon: Users, title: 'User Management', description: 'Manage system users and permissions.', label: 'Manage Users', onClick: () => navigate('/admin/users'), color: 'destructive', show: isAdmin },
-        // ASSOCIATE
-        { icon: Search, title: 'Search Documents', description: 'Search and review documents across cases.', label: 'Search', onClick: () => navigate('/cases'), color: 'primary', show: isAssociate },
-        { icon: CheckCircle2, title: 'Review Queue', description: 'Continue reviewing documents in your queue.', label: 'Review', onClick: () => navigate('/cases'), color: 'success', show: isAssociate },
-        // PARALEGAL
-        {
-            icon: Upload,
-            title: 'Upload Documents',
-            description: `Upload files to start ${INGESTION_STAGES.PROCESS.toLowerCase()} and ${INGESTION_STAGES.INGEST.toLowerCase()}.`,
-            label: 'Upload',
-            onClick: () => navigate('/cases'),
-            color: 'success',
-            show: isParalegal
-        },
-        { icon: Users, title: 'Custodians', description: 'Manage document custodians for your cases.', label: 'Manage', onClick: () => navigate('/cases'), color: 'primary', show: isParalegal },
+        { icon: Briefcase,    title: 'My Cases',          description: 'View and manage your assigned cases.',                                                                                  label: 'Open Cases',    onClick: () => navigate('/cases'),             color: 'primary',     show: true },
+        { icon: BarChart3,    title: 'Analytics',          description: 'Review platform-wide metrics and trends.',                                                                              label: 'View Analytics',onClick: () => navigate('/analytics'),         color: 'purple',      show: hasFullAccess },
+        { icon: Shield,       title: 'Audit Logs',         description: 'Monitor all system activity and changes.',                                                                              label: 'View Logs',     onClick: () => navigate('/admin/audit-logs'),  color: 'warning',     show: hasFullAccess },
+        { icon: Users,        title: 'User Management',    description: 'Manage system users and permissions.',                                                                                  label: 'Manage Users',  onClick: () => navigate('/admin/users'),       color: 'destructive', show: isAdmin },
+        { icon: Search,       title: 'Search Documents',   description: 'Search and review documents across cases.',                                                                             label: 'Search',        onClick: () => navigate('/cases'),             color: 'primary',     show: isAssociate },
+        { icon: CheckCircle2, title: 'Review Queue',       description: 'Continue reviewing documents in your queue.',                                                                           label: 'Review',        onClick: () => navigate('/cases'),             color: 'success',     show: isAssociate },
+        { icon: Upload,       title: 'Upload Documents',   description: `Upload files to start ${INGESTION_STAGES.PROCESS.toLowerCase()} and ${INGESTION_STAGES.INGEST.toLowerCase()}.`,        label: 'Upload',        onClick: () => navigate('/cases'),             color: 'success',     show: isParalegal },
+        { icon: Users,        title: 'Custodians',         description: 'Manage document custodians for your cases.',                                                                            label: 'Manage',        onClick: () => navigate('/cases'),             color: 'primary',     show: isParalegal },
     ].filter(a => a.show);
+
+    // Activity action colour dot
+    const activityDot = (desc: string) => {
+        const d = desc.toLowerCase();
+        if (d.includes('upload')) return 'bg-emerald-500';
+        if (d.includes('update') || d.includes('edit') || d.includes('code')) return 'bg-blue-500';
+        if (d.includes('delete') || d.includes('remove')) return 'bg-red-500';
+        if (d.includes('view') || d.includes('download')) return 'bg-violet-500';
+        if (d.includes('login') || d.includes('logout')) return 'bg-orange-500';
+        return 'bg-primary';
+    };
 
     return (
         <div className="space-y-6 pb-10">
-            {/* Header */}
-            <div className="flex items-start justify-between">
+            {/* ── Header ── */}
+            <div className="flex items-start justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
                         <h1 className="text-2xl font-bold tracking-tight text-foreground">
                             {greeting()}, {user?.firstName}
                         </h1>
                         {roleMeta && (
-                            <Badge variant="outline" className={`text-xs font-medium ${roleMeta.color}`}>
+                            <Badge variant="outline" className={`text-xs font-semibold ${roleMeta.color}`}>
                                 {roleMeta.label}
                             </Badge>
                         )}
                     </div>
-                    <p className="text-muted-foreground text-sm mt-0.5">
-                        {roleSummary}
-                    </p>
+                    <p className="text-muted-foreground text-sm mt-0.5">{roleSummary}</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => navigate('/cases')} className="hidden sm:flex gap-1.5">
-                    <Briefcase className="h-3.5 w-3.5" />
-                    View All Cases
+                <Button variant="outline" size="sm" onClick={() => navigate('/cases')} className="hidden sm:flex gap-1.5 shrink-0">
+                    <Briefcase className="h-3.5 w-3.5" /> View All Cases
                 </Button>
             </div>
 
             {isLoading ? (
-                <div className="flex items-center justify-center py-20">
+                <div className="flex items-center justify-center py-24">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
             ) : (
                 <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-                    {/* Stat Cards — role-aware */}
+
+                    {/* ── Stat Cards ── */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <motion.div variants={itemVariants}>
-                            <StatCard icon={Briefcase} label="Active Cases" value={stats?.activeCases ?? 0} accent onClick={() => navigate('/cases')} />
+                            <StatCard icon={Briefcase}  label="Active Cases"    value={stats?.activeCases ?? 0}    variant="accent"   onClick={() => navigate('/cases')} />
                         </motion.div>
                         <motion.div variants={itemVariants}>
-                            <StatCard icon={FileText} label="Total Documents" value={stats?.totalDocuments ?? 0} onClick={() => navigate('/cases')} />
+                            <StatCard icon={FileText}   label="Total Documents" value={stats?.totalDocuments ?? 0} variant="default"  onClick={() => navigate('/cases')} />
                         </motion.div>
                         <motion.div variants={itemVariants}>
-                            <StatCard icon={Clock} label="Pending Review" value={stats?.pendingReview ?? 0} warning onClick={() => navigate('/cases')} />
+                            <StatCard icon={Clock}      label="Pending Review"  value={stats?.pendingReview ?? 0}  variant="warning"  onClick={() => navigate('/cases')} />
                         </motion.div>
                     </div>
 
-                    {/* Role-specific Quick Actions */}
+                    {/* ── Quick Actions ── */}
                     {quickActions.length > 0 && (
                         <motion.div variants={itemVariants}>
-                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Quick Actions</h2>
+                            <div className="flex items-center gap-2 mb-3">
+                                <Zap className="h-3.5 w-3.5 text-muted-foreground" />
+                                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Quick Actions</h2>
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {quickActions.map((action) => (
+                                {quickActions.map(action => (
                                     <QuickActionCard key={action.title} {...action} />
                                 ))}
                             </div>
                         </motion.div>
                     )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    {/* ── Cases Overview + Recent Activity ── */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+
                         {/* Cases Overview */}
                         <motion.div variants={itemVariants} className="lg:col-span-2">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <Card className="border border-border/60 shadow-sm">
+                                <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/60">
                                     <div>
-                                        <CardTitle className="text-base">Cases Overview</CardTitle>
-                                        <CardDescription className="text-xs">Review progress across active cases</CardDescription>
+                                        <CardTitle className="text-base font-semibold">Cases Overview</CardTitle>
+                                        <CardDescription className="text-xs mt-0.5">Review progress across active cases</CardDescription>
                                     </div>
-                                    <Button variant="ghost" size="sm" onClick={() => navigate('/cases')} className="gap-1 text-xs">
+                                    <Button variant="ghost" size="sm" onClick={() => navigate('/cases')} className="gap-1 text-xs text-primary">
                                         All Cases <ArrowRight className="h-3 w-3" />
                                     </Button>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="pt-3 pb-2">
                                     {overview.length === 0 ? (
                                         <div className="text-center py-10">
-                                            <Briefcase className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                                            <p className="text-sm text-muted-foreground">No active cases assigned.</p>
+                                            <Briefcase className="h-8 w-8 text-muted-foreground/25 mx-auto mb-2" />
+                                            <p className="text-sm font-medium text-foreground">No active cases</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">No cases have been assigned to you yet.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-1">
                                             {overview.slice(0, 5).map(c => (
                                                 <button
                                                     key={c._id}
-                                                    className="w-full flex items-center gap-4 hover:bg-muted/50 p-2.5 rounded-lg transition-colors text-left"
+                                                    className="w-full flex items-center gap-4 hover:bg-muted/50 px-2.5 py-2.5 rounded-lg transition-colors text-left group"
                                                     onClick={() => navigate(`/cases/${c._id}`)}
                                                 >
+                                                    {/* Colour dot */}
+                                                    <div className="h-2 w-2 rounded-full bg-primary shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" />
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-medium text-foreground truncate">{c.caseName}</p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {c.reviewedDocuments} / {c.totalDocuments} reviewed
+                                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                                            <span className="font-semibold text-foreground">{c.reviewedDocuments}</span>
+                                                            <span className="text-muted-foreground"> / {c.totalDocuments} reviewed</span>
                                                         </p>
                                                     </div>
                                                     <div className="w-28 shrink-0">
                                                         <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                                                            <span>{c.progress}%</span>
+                                                            <span className="font-semibold text-foreground">{c.progress}%</span>
                                                         </div>
                                                         <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
-                                                            <div className="bg-primary h-full rounded-full transition-all duration-500" style={{ width: `${c.progress}%` }} />
+                                                            <div
+                                                                className="h-full rounded-full transition-all duration-500"
+                                                                style={{
+                                                                    width: `${c.progress}%`,
+                                                                    background: c.progress >= 80
+                                                                        ? 'hsl(var(--success, 142 71% 45%))'
+                                                                        : c.progress >= 40
+                                                                        ? 'hsl(var(--primary))'
+                                                                        : 'hsl(var(--warning, 38 92% 50%))',
+                                                                }}
+                                                            />
                                                         </div>
                                                     </div>
-                                                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                                                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0 group-hover:text-muted-foreground transition-colors" />
                                                 </button>
                                             ))}
                                         </div>
@@ -283,32 +321,40 @@ const DashboardPage = () => {
                             </Card>
                         </motion.div>
 
-                        {/* Recent Activity */}
+                        {/* Recent Activity — same height as Cases Overview, inner scroll */}
                         <motion.div variants={itemVariants}>
-                            <Card className="h-full">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <Activity className="h-4 w-4 text-muted-foreground" /> Recent Activity
+                            <Card className="border border-border/60 shadow-sm flex flex-col" style={{ maxHeight: '320px' }}>
+                                <CardHeader className="pb-3 border-b border-border/60 shrink-0">
+                                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                                        <Activity className="h-4 w-4 text-muted-foreground" />
+                                        Recent Activity
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="flex-1 overflow-y-auto pt-2 pb-2 min-h-0 scrollbar-thin">
                                     {activity.length === 0 ? (
-                                        <div className="text-center py-10">
-                                            <TrendingUp className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                                            <p className="text-sm text-muted-foreground">No recent activity.</p>
+                                        <div className="text-center py-8">
+                                            <TrendingUp className="h-7 w-7 text-muted-foreground/25 mx-auto mb-2" />
+                                            <p className="text-sm font-medium text-foreground">No recent activity</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Actions will appear here.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-0.5">
                                             {activity.map((item, idx) => (
-                                                <div key={idx} className="flex gap-3 items-start p-2 rounded-lg hover:bg-muted/30 transition-colors">
-                                                    <div className="bg-primary/8 p-1.5 rounded-lg mt-0.5 shrink-0">
-                                                        <FileText className="h-3 w-3 text-primary" />
+                                                <div key={idx} className="flex gap-2.5 items-start px-1 py-2 rounded-lg hover:bg-muted/30 transition-colors">
+                                                    {/* Coloured dot */}
+                                                    <div className="mt-1.5 shrink-0">
+                                                        <span className={`block h-2 w-2 rounded-full ${activityDot(item.description)}`} />
                                                     </div>
-                                                    <div className="min-w-0">
+                                                    <div className="min-w-0 flex-1">
                                                         <p className="text-xs font-medium text-foreground leading-snug line-clamp-2">{item.description}</p>
-                                                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                                                            {new Date(item.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                                        </p>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            {item.caseName && (
+                                                                <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{item.caseName}</span>
+                                                            )}
+                                                            <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                                                                {new Date(item.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}
@@ -319,23 +365,24 @@ const DashboardPage = () => {
                         </motion.div>
                     </div>
 
-                    {/* Admin-only: system alert banner */}
+                    {/* ── Admin alert ── */}
                     {isAdmin && (
                         <motion.div variants={itemVariants}>
-                            <Card className="border-warning/30 bg-warning/5">
+                            <Card className="border-amber-400/30 bg-amber-50 dark:bg-amber-950/20">
                                 <CardContent className="p-4 flex items-center gap-3">
-                                    <AlertCircle className="h-4 w-4 text-warning shrink-0" />
+                                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
                                     <p className="text-sm text-foreground">
                                         You have admin access. Visit{' '}
-                                        <button onClick={() => navigate('/admin/users')} className="text-primary underline font-medium">User Management</button>
+                                        <button onClick={() => navigate('/admin/users')} className="text-primary underline font-semibold">User Management</button>
                                         {' '}or{' '}
-                                        <button onClick={() => navigate('/admin/audit-logs')} className="text-primary underline font-medium">Audit Logs</button>
+                                        <button onClick={() => navigate('/admin/audit-logs')} className="text-primary underline font-semibold">Audit Logs</button>
                                         {' '}to manage the platform.
                                     </p>
                                 </CardContent>
                             </Card>
                         </motion.div>
                     )}
+
                 </motion.div>
             )}
         </div>
